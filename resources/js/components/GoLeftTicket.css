@@ -1,0 +1,146 @@
+/* Envoltorio propio alrededor de TearTicket para el boleto "Go Left!!"
+   de la landing: contenido del cuerpo/talon y el panel que aparece
+   despues de arrancar (ver decision del usuario: arrancar revela el
+   formulario, en vez de llevarlo dentro del talon que sale volando). */
+.gl-ticket-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* Sin esto, .tear-ticket (width: min(var(--tt-w), 100%)) no tiene un
+     100% real contra que resolver dentro de un flex item sin ancho
+     propio -crece a sus 420px nativos y se sale del viewport en
+     movil, sin importar que .ev-ticket-mount si este acotado-. */
+  width: 100%;
+  min-width: 0;
+}
+
+/* .tear-ticket__content (donde el componente renderiza nuestro
+   `children`, es decir .gl-body) cubre TODA su caja -inset:0- por
+   encima de .tear-ticket__art (imagen/video), que es su hermano en el
+   mismo nivel. El ejemplo original del componente solo ponia ahi un
+   <span> chico, asi que nunca noto el problema; el nuestro cubre todo
+   el cuerpo para el texto con scrim, y sin esto tapaba el hover del
+   video por completo. */
+.gl-ticket-wrap .tear-ticket__content {
+  pointer-events: none;
+}
+
+.gl-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 26px 30px;
+}
+
+.gl-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 34px;
+  letter-spacing: .02em;
+  margin: 0;
+}
+
+.gl-date {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 9px 0 0;
+  font-family: 'Space Mono', monospace;
+  font-size: 16px;
+  color: #73c6f5;
+}
+
+.gl-desc {
+  margin: 10px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, .68);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Talon a la derecha (orientation="horizontal"): franja angosta y
+   alta, no una tira ancha y baja -columna en vez de fila-. */
+.gl-stub {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 18px;
+  text-align: center;
+}
+
+.gl-stub-live {
+  flex-shrink: 0;
+  background: #e0263f;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: .04em;
+  padding: 6px 12px;
+  border-radius: 5px;
+}
+
+.gl-stub-cta {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  line-height: 1.35;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+/* Panel que aparece al arrancar (onTear). Nace colapsado y se abre con
+   una animacion propia -CSS a secas, sin motion, para no acoplar mas
+   de la cuenta al resto del render-. */
+.gl-reveal {
+  width: min(560px, 100%);
+  margin-top: 30px;
+  animation: glRevealIn .45s cubic-bezier(.22, 1, .36, 1);
+}
+@keyframes glRevealIn {
+  from { opacity: 0; transform: translateY(-10px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+
+.gl-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px }
+.gl-form .form-group { margin-bottom: 16px }
+.gl-form .form-group label { font-size: 13px; margin-bottom: 7px }
+.gl-form .form-group input {
+  height: 50px; padding: 0 14px; font-size: 15px;
+  background: rgba(255, 255, 255, .04);
+}
+
+.gl-submit {
+  width: 100%; height: 50px; border: 0; border-radius: 9px;
+  background: #73c6f5; color: #04101f;
+  font-family: inherit; font-size: 15px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .04em;
+  cursor: pointer; transition: filter .2s ease;
+}
+.gl-submit:hover { filter: brightness(1.1) }
+
+.gl-pending { font-size: 15px; color: rgba(255, 255, 255, .55); margin: 0 0 14px }
+
+/* Vive siempre -antes y despues de arrancar el boleto-, ya no dentro
+   de .gl-reveal, asi que necesita su propio ancho acotado (si no,
+   estira a los 800px del contenedor de la tarjeta) y su propio margen
+   respecto al boleto de arriba. */
+.gl-copy {
+  width: min(560px, 100%); height: 42px; margin-top: 24px; border-radius: 9px;
+  background: transparent; border: 1px solid rgba(91, 155, 213, .18); color: #fff;
+  font-family: inherit; font-size: 14px; letter-spacing: .03em;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  cursor: pointer; transition: border-color .2s ease, color .2s ease;
+}
+.gl-copy:hover { border-color: #73c6f5; color: #73c6f5 }
+.gl-copy.is-copied { border-color: #3ddc84; color: #3ddc84 }
+
+@media (prefers-reduced-motion: reduce) {
+  .gl-reveal { animation: none }
+}
