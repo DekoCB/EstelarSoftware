@@ -6,7 +6,7 @@ import './TearTicket.css';
 const TILT_SPRING = { stiffness: 220, damping: 24, mass: 0.6 };
 const GRAVITY = 2400;
 const ART_INSET = 8;
-const ART_SPAN = 0.78;
+const ART_SPAN_DEFAULT = 0.78;
 const RETRACT = 0.17;
 
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -114,6 +114,12 @@ export default function TearTicket({
   // componente. El original solo soporta <img>, asi que esto se agrega
   // sin tocar el resto de la logica.
   video = '',
+  // Extension propia: el original reservaba el 22% inferior del cuerpo
+  // para que el texto (children) tuviera aire debajo de la imagen. Sin
+  // texto (nuestro caso: solo imagen + video), ese espacio se ve como un
+  // hueco vacio -asi que se vuelve prop, con el mismo valor de siempre
+  // por default para no afectar a nadie mas que lo use con texto-.
+  artSpan = ART_SPAN_DEFAULT,
 }) {
   const reduce = useReducedMotion();
   const controlled = torn !== undefined;
@@ -548,7 +554,7 @@ export default function TearTicket({
         '--tt-body-w': `${vertical ? width : width - stubSize}px`,
         '--tt-body-h': `${vertical ? height - stubSize : height}px`,
         '--tt-inset': `${ART_INSET}px`,
-        '--tt-span': ART_SPAN,
+        '--tt-span': artSpan,
         '--tt-art-radius': `${imageRadius}px`,
         '--tt-fit': fit,
         height: `${height * fit}px`

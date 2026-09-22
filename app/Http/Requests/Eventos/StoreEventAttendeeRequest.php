@@ -17,6 +17,8 @@ class StoreEventAttendeeRequest extends FormRequest
     {
         return [
             'nombres'           => ['required', 'string', 'max:200'],
+            'nickname'          => ['nullable', 'string', 'max:100'],
+            'edad'              => ['nullable', 'integer', 'min:1', 'max:120'],
             'empresa'           => ['nullable', 'string', 'max:200'],
             'tipo_documento'    => ['nullable', Rule::in(EventAttendee::TIPOS_DOCUMENTO)],
             'numero_documento'  => [
@@ -29,6 +31,13 @@ class StoreEventAttendeeRequest extends FormRequest
             'direccion'         => ['nullable', 'string', 'max:500'],
             'email'             => ['nullable', 'email', 'max:150'],
             'telefono'          => ['nullable', 'string', 'max:20'],
+            // Especificas de torneos (Go Left!! / Left 4 Dead 2): nullable
+            // aqui porque este mismo request sirve para cualquier evento,
+            // no solo para uno con equipos -el "required" real de estas
+            // vive en el formulario de ese evento puntual, no aqui-.
+            'steam_id'          => ['nullable', 'string', 'max:50'],
+            'equipo'            => ['nullable', 'string', 'max:150'],
+            'rol'               => ['nullable', 'string', 'max:20'],
         ];
     }
 

@@ -1,42 +1,83 @@
-/* Envoltorio propio alrededor de TearTicket para el boleto "Go Left!!"
-   de la landing: contenido del cuerpo/talon y el panel que aparece
-   despues de arrancar (ver decision del usuario: arrancar revela el
-   formulario, en vez de llevarlo dentro del talon que sale volando). */
+/* Envoltorio propio para el boleto "Go Left!!" de la landing: una
+   FlipCard (React Bits) de frente/reverso -imagen del evento, luego su
+   detalle y los botones de accion-. "Registrarse" hace entrar al
+   TearTicket con su propia animacion (entra desde la derecha girando);
+   recien al arrancarlo aparece, tambien a la derecha, el formulario real
+   del torneo.
+   Fila, no columna: apilar todo hacia abajo (version anterior) hacia
+   afuera del alto fijo de .ev-card (480px) via overflow:visible sigue
+   contando como "contenido" para el overflow escrolleable de .ev-panel
+   -hueco vacio enorme debajo del formulario, sin nada ahi-. En fila el
+   crecimiento es horizontal: se abraza con ancho fijo por pieza (nada
+   de encoger para caber) y scroll horizontal en vez de pelear por el
+   overflow vertical. */
 .gl-ticket-wrap {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  /* Sin esto, .tear-ticket (width: min(var(--tt-w), 100%)) no tiene un
-     100% real contra que resolver dentro de un flex item sin ancho
-     propio -crece a sus 420px nativos y se sale del viewport en
-     movil, sin importar que .ev-ticket-mount si este acotado-. */
+  justify-content: center;
+  gap: 32px;
   width: 100%;
   min-width: 0;
+  /* Contrarresta el skewY(3deg) que CardSwap le aplica a .ev-card (el
+     "abanico" del mazo, en welcome.blade.php/initCardSwap). Esta card
+     no tiene fondo ni borde propios (.ev-ticket-mount los quita), asi
+     que ese sesgo no se ve en nada aqui -pero SI infla la caja delimi-
+     tadora que getBoundingClientRect reporta para todo lo de adentro,
+     proporcional al ancho del contenido (ancho*tan(3°)). Eso, no un
+     hueco real, era el "espacio vacio" que quedaba debajo al desglosar
+     el ticket: mientras mas ancho el contenido (el ticket a 720px, la
+     fila entera mas todavia), mas alto de mas media el navegador. */
+  transform: skewY(-3deg);
+}
+/* Antes de "Registrarse" -solo la FlipCard- se ve centrada como
+   siempre; en cuanto el ticket entra, se ancla a la izquierda para que
+   todo lo nuevo crezca hacia la derecha (scrollear, no re-centrar). */
+.gl-ticket-wrap:has(.gl-ticket-enter) {
+  justify-content: flex-start;
+}
+/* flex-shrink:0 en cada pieza: sin esto flexbox las encoge para intentar
+   caber en el ancho visible, exactamente lo que no queremos ahora que
+   el ancho real se resuelve con scroll. */
+.gl-ticket-wrap > * {
+  flex-shrink: 0;
 }
 
-/* .tear-ticket__content (donde el componente renderiza nuestro
-   `children`, es decir .gl-body) cubre TODA su caja -inset:0- por
-   encima de .tear-ticket__art (imagen/video), que es su hermano en el
-   mismo nivel. El ejemplo original del componente solo ponia ahi un
-   <span> chico, asi que nunca noto el problema; el nuestro cubre todo
-   el cuerpo para el texto con scrim, y sin esto tapaba el hover del
-   video por completo. */
-.gl-ticket-wrap .tear-ticket__content {
-  pointer-events: none;
+/* La FlipCard fija su tamano en px via custom properties inline
+   (--fc-w/--fc-h); en el breakpoint movil de .ev-card (300x490) se
+   sobreescriben con !important -un inline style solo cede ante eso. */
+@media (max-width: 480px) {
+  .gl-ticket-wrap .flip-card {
+    --fc-w: 300px !important;
+    --fc-h: 400px !important;
+  }
 }
 
-.gl-body {
+/* ── Frente de la FlipCard: solo la imagen -el video ahora es un fondo
+   de pantalla aparte, ver .ev-video-bg en welcome.blade.php-. Este div
+   solo existe para detectar el hover que lo dispara. ────────────────── */
+.gl-front {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.gl-front img { position: absolute; inset: 0 }
+
+/* ── Reverso de la FlipCard: detalle del evento + acciones ────────── */
+.gl-back {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  padding: 26px 30px;
+  justify-content: space-between;
+  padding: 30px 32px;
 }
+
+.gl-back-body { min-height: 0 }
 
 .gl-name {
   font-family: 'Orbitron', sans-serif;
-  font-size: 34px;
+  font-size: 30px;
   letter-spacing: .02em;
   margin: 0;
 }
@@ -45,73 +86,125 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  margin: 9px 0 0;
+  margin: 10px 0 0;
   font-family: 'Space Mono', monospace;
-  font-size: 16px;
+  font-size: 15px;
   color: #73c6f5;
 }
 
 .gl-desc {
-  margin: 10px 0 0;
-  font-size: 16px;
-  line-height: 1.5;
+  margin: 12px 0 0;
+  font-size: 15px;
+  line-height: 1.55;
   color: rgba(255, 255, 255, .68);
   display: -webkit-box;
-  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.gl-desc--back { -webkit-line-clamp: 4 }
 
-/* Talon a la derecha (orientation="horizontal"): franja angosta y
-   alta, no una tira ancha y baja -columna en vez de fila-. */
-.gl-stub {
-  height: 100%;
+.gl-back-actions {
   display: flex;
-  flex-direction: column;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.gl-back-cta {
+  flex: 1;
+  height: 48px;
+  border: 0;
+  border-radius: 9px;
+  background: #73c6f5;
+  color: #04101f;
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: filter .2s ease;
+}
+.gl-back-cta:hover { filter: brightness(1.1) }
+
+.gl-back-link {
+  flex: 1;
+  height: 48px;
+  border-radius: 9px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, .22);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  letter-spacing: .02em;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 0 18px;
-  text-align: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color .2s ease, color .2s ease;
+}
+.gl-back-link:hover { border-color: #73c6f5; color: #73c6f5 }
+.gl-back-link.is-copied { border-color: #3ddc84; color: #3ddc84 }
+
+@media (max-width: 480px) {
+  .gl-back { padding: 22px 22px }
+  .gl-name { font-size: 24px }
+  .gl-back-actions { flex-direction: column; gap: 10px }
 }
 
-.gl-stub-live {
-  flex-shrink: 0;
-  background: #e0263f;
-  color: #fff;
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: .04em;
-  padding: 6px 12px;
-  border-radius: 5px;
+/* ── Entrada del boleto al pulsar "Registrarse" ────────────────────
+   Ancho fijo -720px, el mismo que el prop `width` del TearTicket-, no
+   100%: en una fila, un item sin ancho propio se encoge a su contenido
+   minimo, y el `width: min(var(--tt-w), 100%)` del ticket termina
+   resolviendo contra ESE ancho encogido en vez del real (mismo problema
+   circular que .gl-ticket-wrap ya resolvia para la columna, aqui
+   aplicado a la fila). Entra desde la derecha girando, como la moneda
+   de Eventos -mismo lenguaje visual de la pagina, y no una casualidad:
+   un rotateY (giro 3D, eje Y) en vez de un rotate 2D es ademas la razon
+   real por la que sobraba tanto scroll vertical debajo. Un rotate()
+   plano gira en su propio plano: a mitad de vuelta la caja que ocupa es
+   su DIAGONAL (bastante mas grande que el rectangulo en reposo), y el
+   navegador reserva ese maximo para el overflow scrolleable de
+   .ev-panel aun cuando la animacion ya termino. rotateY no infla esa
+   caja -solo comprime el ancho por perspectiva-, así que no deja ese
+   sobrante. */
+.gl-ticket-enter {
+  width: 720px;
+  perspective: 1200px;
+  animation: glTicketEnter .7s cubic-bezier(.22, 1, .36, 1);
+}
+@keyframes glTicketEnter {
+  from { opacity: 0; transform: translateX(120px) rotateY(-360deg) scale(.85) }
+  to   { opacity: 1; transform: translateX(0) rotateY(0deg) scale(1) }
 }
 
-.gl-stub-cta {
-  margin: 0;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 18px;
-  line-height: 1.35;
-  letter-spacing: .03em;
-  text-transform: uppercase;
-}
-
-/* Panel que aparece al arrancar (onTear). Nace colapsado y se abre con
-   una animacion propia -CSS a secas, sin motion, para no acoplar mas
-   de la cuenta al resto del render-. */
+/* ── Panel del formulario, al arrancar el boleto ───────────────────
+   A la derecha del ticket, no debajo -mismo ancho fijo, misma razon-.
+   Nace colapsado y se abre con una animacion propia -CSS a secas, sin
+   motion, para no acoplar mas de la cuenta al resto del render-. */
 .gl-reveal {
-  width: min(560px, 100%);
-  margin-top: 30px;
+  width: 560px;
   animation: glRevealIn .45s cubic-bezier(.22, 1, .36, 1);
 }
 @keyframes glRevealIn {
-  from { opacity: 0; transform: translateY(-10px) }
-  to { opacity: 1; transform: translateY(0) }
+  from { opacity: 0; transform: translateX(24px) }
+  to { opacity: 1; transform: translateX(0) }
+}
+
+.gl-form-title {
+  margin: 0 0 18px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 15px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .55);
 }
 
 .gl-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px }
 .gl-form .form-group { margin-bottom: 16px }
 .gl-form .form-group label { font-size: 13px; margin-bottom: 7px }
-.gl-form .form-group input {
+.gl-form .form-group input,
+.gl-form .form-group select {
   height: 50px; padding: 0 14px; font-size: 15px;
   background: rgba(255, 255, 255, .04);
 }
@@ -127,20 +220,65 @@
 
 .gl-pending { font-size: 15px; color: rgba(255, 255, 255, .55); margin: 0 0 14px }
 
-/* Vive siempre -antes y despues de arrancar el boleto-, ya no dentro
-   de .gl-reveal, asi que necesita su propio ancho acotado (si no,
-   estira a los 800px del contenedor de la tarjeta) y su propio margen
-   respecto al boleto de arriba. */
-.gl-copy {
-  width: min(560px, 100%); height: 42px; margin-top: 24px; border-radius: 9px;
-  background: transparent; border: 1px solid rgba(91, 155, 213, .18); color: #fff;
-  font-family: inherit; font-size: 14px; letter-spacing: .03em;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  cursor: pointer; transition: border-color .2s ease, color .2s ease;
+.gl-stub {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 18px;
+  text-align: center;
 }
-.gl-copy:hover { border-color: #73c6f5; color: #73c6f5 }
-.gl-copy.is-copied { border-color: #3ddc84; color: #3ddc84 }
+.gl-stub-live {
+  flex-shrink: 0;
+  background: #e0263f;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: .04em;
+  padding: 6px 12px;
+  border-radius: 5px;
+}
+.gl-stub-cta {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 18px;
+  line-height: 1.35;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+}
+
+/* Manchas de sangre decorativas (tema Left 4 Dead), sobre el negro del
+   talon. Cada radial-gradient usa dos paradas casi iguales para dar un
+   borde definido -mancha, no destello difuso- y se posicionan como una
+   salpicadura real: mas densas hacia una esquina, dispersandose. Solo
+   en el talon: con artSpan=1 la foto cubre casi todo el cuerpo, asi que
+   ahi cualquier mancha quedaria tapada; el talon es la unica superficie
+   negra realmente visible.
+   OJO con las coordenadas: .tear-ticket__paper--stub no es del ancho
+   del talon -es position:absolute;inset:0 sobre el boleto ENTERO
+   (720px), recortado luego por clip-path a la tira del talon (el 30%
+   derecho, x:~71%-100%). Los porcentajes de este gradiente se miden
+   contra esos 720px, no contra el talon visible, asi que todo tiene que
+   caer dentro de ese 71%-100% para no perderse en la parte recortada. */
+.gl-ticket-enter .tear-ticket__paper--stub {
+  /* Radios en px, no en % -en un radial-gradient sin tamano explicito
+     el % se mide contra la distancia a la esquina MAS LEJANA del punto,
+     que varia segun donde caiga cada mancha; con px el tamano es el
+     mismo sin importar la posicion. */
+  background-image:
+    radial-gradient(circle at 78% 10%, #c81f2b 0px, #c81f2b 11px, transparent 15px),
+    radial-gradient(circle at 90% 6%,  #6b0f0f 0px, #6b0f0f 4px, transparent 6px),
+    radial-gradient(circle at 85% 42%, #8b1414 0px, #8b1414 8px, transparent 11px),
+    radial-gradient(circle at 74% 66%, #6b0f0f 0px, #6b0f0f 6px, transparent 9px),
+    radial-gradient(circle at 94% 86%, #c81f2b 0px, #c81f2b 9px, transparent 12px),
+    radial-gradient(circle at 81% 93%, #6b0f0f 0px, #6b0f0f 3px, transparent 5px),
+    radial-gradient(circle at 92% 30%, #4a0a0a 0px, #4a0a0a 2.5px, transparent 4px),
+    radial-gradient(circle at 87% 58%, #4a0a0a 0px, #4a0a0a 2px, transparent 3.5px);
+  background-repeat: no-repeat;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .gl-reveal { animation: none }
+  .gl-ticket-enter, .gl-reveal { animation: none }
 }

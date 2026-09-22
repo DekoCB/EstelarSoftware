@@ -574,18 +574,45 @@
     background: rgba(4, 6, 14, .82);
     -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
     }
+    /* Fondo de pantalla con el video del evento al pasar el mouse sobre
+     * la card (ver #evVideoBg + GoLeftBgVideo). Vive sobre .ev-backdrop
+     * -mismo apilamiento sin z-index explicito, solo orden en el DOM- y
+     * bajo .ev-panel -ese si lleva z-index:1-, asi que el ticket y el
+     * texto siguen legibles encima. pointer-events:none: es puramente
+     * decorativo, nunca debe robarle el hover/click a lo de abajo. */
+    .ev-video-bg {
+    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
+    }
+    .ev-video-bg-el {
+    position: absolute; inset: -30px;
+    width: calc(100% + 60px); height: calc(100% + 60px);
+    object-fit: cover;
+    filter: blur(28px) brightness(.55) saturate(1.15);
+    /* El blur real (28px) desenfoca los bordes del propio video contra
+     * el fondo -sin el inset:-30px de sobra, esa costura se veria como
+     * un marco nitido alrededor de una imagen borrosa-. */
+    opacity: 0;
+    transition: opacity .5s ease;
+    }
+    .ev-video-bg-el.is-active { opacity: 1 }
+    @media (prefers-reduced-motion: reduce) {
+    .ev-video-bg-el { transition: none }
+    }
     .ev-panel {
     position: relative; z-index: 1;
-    max-width: 1040px; width: 100%; max-height: 92vh; overflow: hidden;
-    /* Colchon vertical: el skewY de las tarjetas (CardSwap) infla su caja
-     * de tinta unos px mas alla del alto declarado, y sin este margen ese
-     * sobrante disparaba un scroll de 15-20px incluso cuando el contenido
-     * "cabe" de sobra. overflow en hidden a secas (nunca "auto"): al
-     * cambiar de card, la que sale se anima 380px hacia abajo -bien fuera
-     * de estos limites- y con "auto" eso hacia parpadear una scrollbar
-     * real durante la animacion; con "hidden" simplemente se recorta,
-     * que es como se ve en el componente original. */
-    padding-block: 26px;
+    max-width: 1040px; width: 100%; max-height: 96vh;
+    /* auto (no "hidden"): el boleto/formulario que aparecen a la derecha
+     * (scroll horizontal, ver GoLeftTicket.css) pueden superar el alto
+     * disponible en pantallas bajas, y con "hidden" ese sobrante quedaba
+     * inalcanzable, sin forma de llegar a el. scrollbar-gutter:stable
+     * reserva el carril siempre -aunque no haga falta scrollear todavia-
+     * para que la scrollbar no dispare un salto de layout al aparecer.
+     * max-height en 96vh (no 92) y menos padding/margenes abajo: la
+     * FlipCard vertical necesita mas alto que el carrusel horizontal
+     * original, asi que se le da todo el aire posible para que el scroll
+     * vertical sea la excepcion, no la norma. */
+    overflow-y: auto; scrollbar-gutter: stable;
+    padding-block: 18px;
     display: flex; flex-direction: column; align-items: center;
     transform: translateY(16px) scale(.97);
     transition: transform .35s cubic-bezier(.22, 1, .36, 1);
@@ -603,7 +630,7 @@
     position: relative; z-index: 2;
     font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 700;
     letter-spacing: .1em; text-transform: uppercase; color: #fff;
-    margin-bottom: 40px;
+    margin-bottom: 18px;
     }
 
     /* ── Mazo de tarjetas (CardSwap) + flechas de navegacion, a lo
@@ -611,7 +638,7 @@
      * abanico, con flechas circulares a los lados. Con un solo evento las
      * flechas quedan ocultas -no hay a donde navegar- y la pila se ve
      * como una tarjeta suelta. */
-    .ev-stack-wrap { display: flex; align-items: center; justify-content: center; gap: 22px; margin-top: 24px }
+    .ev-stack-wrap { display: flex; align-items: center; justify-content: center; gap: 22px; margin-top: 14px }
     .ev-nav {
     flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; border: 0; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
@@ -622,10 +649,10 @@
     .ev-nav:hover { background: var(--blue-glow); color: #04101f; transform: scale(1.08) }
     .ev-nav[hidden] { display: none }
 
-    .ev-stack { position: relative; width: 800px; height: 480px; perspective: 900px }
+    .ev-stack { position: relative; width: 800px; height: 560px; perspective: 900px }
     .ev-card {
     position: absolute; top: 50%; left: 50%;
-    width: 800px; height: 480px;
+    width: 800px; height: 560px;
     background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px;
     overflow: hidden; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
     transform-style: preserve-3d; will-change: transform;
@@ -638,7 +665,13 @@
      * necesita poder crecer hacia abajo sin que .ev-card se lo recorte. */
     .ev-ticket-mount {
     background: transparent; border: 0; overflow: visible; cursor: default;
-    display: flex; align-items: center; justify-content: center;
+    /* align-items empieza en flex-start, no center: centrado verticalmente
+     * crecia hacia ARRIBA ademas de abajo en cuanto el contenido de React
+     * superaba el alto fijo de la card (FlipCard + formulario + boleto
+     * mini, al pulsar "Registrarse"), montandose sobre "EVENTOS". Anclado
+     * arriba, ese crecimiento extra queda todo hacia abajo -para lo que
+     * ya esta el overflow:auto puntual de .ev-panel-. */
+    display: flex; align-items: flex-start; justify-content: center;
     }
 
     /* Recuadro "Proximamente": mismo tamaño de tarjeta, sin media, solo
@@ -2979,6 +3012,15 @@
     <!-- Overlay de eventos: recuadros centrados y sobrepuestos al abrir la moneda. -->
     <div class="ev-overlay" id="eventsOverlay" role="dialog" aria-modal="true" aria-label="Eventos">
     <div class="ev-backdrop" data-ev-close></div>
+    <!-- Destino de un portal de React (ver GoLeftBgVideo en
+         tear-ticket-mount.jsx): al pasar el mouse sobre la card, el
+         video del evento se reproduce aqui, de fondo y difuminado.
+         Fuera de .ev-panel a proposito -.ev-panel anima con
+         transform:scale/translateY, y eso vuelve "fixed" a cualquier
+         descendiente en un position:absolute relativo a el, no al
+         viewport-. Como hermano de .ev-backdrop, en cambio, sigue
+         siendo un position:fixed real sobre toda la pantalla. -->
+    <div class="ev-video-bg" id="evVideoBg"></div>
     <!-- Fuera de .ev-panel a proposito: si el panel scrollea, un boton
          posicionado con offsets negativos dentro de el queda recortado
          por su propio overflow. Aqui, fijo al overlay, nunca se corta. -->
@@ -3004,7 +3046,8 @@
                 data-nombre="{{ $goLeftEvent->nombre ?? 'Go Left!!' }}"
                 data-fecha="{{ optional($goLeftEvent?->fecha_inicio)->format('d/m/Y') ?? '28/09/2026' }}"
                 data-descripcion="{{ $goLeftEvent->descripcion ?? 'Descripción del evento pendiente de completar.' }}"
-                data-image="img/Go Left Estelar.jpeg"
+                data-image="img/Banner28.jpeg"
+                data-ticket-image="img/Go Left Estelar.jpeg"
                 data-video="video/VideoLeft.mp4"
                 @if($goLeftEvent)
                 data-action="{{ route('eventos.inscripcion.store', $goLeftEvent) }}"
@@ -3186,6 +3229,39 @@
 
         let order = cards.map((_, i) => i);
         cards.forEach((el, i) => placeNow(el, makeSlot(i)));
+
+        /* Recentrado dinamico: gsap.set({xPercent:-50, yPercent:-50})
+         * calcula el desplazamiento contra el TAMAÑO DEL ELEMENTO en el
+         * momento del .set() de arriba -que corre una sola vez, aqui,
+         * al cargar la pagina-. El boleto "Go Left!!" (React, dentro de
+         * esta card) cambia de alto segun su propio estado -Registrarse
+         * hace entrar el ticket, desglosarlo revela el formulario- y
+         * sin repetir placeNow() contra el tamaño ACTUAL, la card queda
+         * centrada contra el tamaño que tenia al cargar, no el de
+         * ahora: por eso sobraba/faltaba espacio segun la seccion.
+         * React monta ese contenido de forma asincrona (createRoot().
+         * render() corre despues de este script), asi que un
+         * MutationObserver agarra el nodo en cuanto aparece y recien
+         * ahi se engancha el ResizeObserver que dispara el recentrado. */
+        const recenter = () => cards.forEach((el, i) => {
+        const idx = order.indexOf(i);
+        if (idx !== -1) placeNow(el, makeSlot(idx));
+        });
+        let recenterRaf = 0;
+        const scheduleRecenter = () => {
+        cancelAnimationFrame(recenterRaf);
+        recenterRaf = requestAnimationFrame(recenter);
+        };
+        cards.forEach(el => {
+        const attach = (node) => new ResizeObserver(scheduleRecenter).observe(node);
+        const existing = el.querySelector('.gl-ticket-wrap');
+        if (existing) { attach(existing); return; }
+        const mo = new MutationObserver(() => {
+            const wrap = el.querySelector('.gl-ticket-wrap');
+            if (wrap) { attach(wrap); mo.disconnect(); }
+        });
+        mo.observe(el, { childList: true });
+        });
 
         function swap() {
         if (order.length < 2) return;

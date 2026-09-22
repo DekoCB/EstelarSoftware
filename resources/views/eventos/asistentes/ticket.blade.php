@@ -109,7 +109,7 @@
             @php
                 $mensajeWhatsapp = "Aquí está mi entrada para *{$evento->nombre}*:\n" . url()->current();
             @endphp
-            <a href="https://wa.me/51924210341?text={{ urlencode($mensajeWhatsapp) }}" target="_blank" rel="noopener"
+            <a href="https://wa.me/51977765710?text={{ urlencode($mensajeWhatsapp) }}" target="_blank" rel="noopener"
                class="flex-1 py-3.5 sm:py-3 rounded-xl text-base sm:text-sm font-semibold text-white text-center
                       bg-emerald-600 hover:bg-emerald-500
                       shadow-[0_0_18px_rgba(16,185,129,0.35)] hover:shadow-[0_0_28px_rgba(16,185,129,0.55)]
