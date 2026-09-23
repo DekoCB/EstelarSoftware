@@ -2869,7 +2869,7 @@
     <a href="https://wa.me/51924210341" target="_blank" rel="noopener" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
     <a href="#" target="_blank" rel="noopener" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
     <a href="https://www.tiktok.com/@estelarsoftware?_r=1&_t=ZS-99woxJ91v5J" target="_blank" rel="noopener" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
-    <a href="https://www.facebook.com/estelarsoftware" target="_blank" rel="noopener" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+    <a href="https://www.facebook.com/estelarsoftware1" target="_blank" rel="noopener" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
     </nav>
 
     <!-- Moneda "Eventos": esquina inferior izquierda. Cuelga del body igual
@@ -2892,7 +2892,7 @@
         data-nombre="{{ $goLeftEvent->nombre }}"
         data-fecha="{{ optional($goLeftEvent->fecha_inicio)->format('d/m/Y') ?? '' }}"
         data-descripcion="{{ $goLeftEvent->descripcion ?? '' }}"
-        data-banner="{{ asset('img/Banner28.jpeg') }}"
+        data-banner="{{ asset('img/Banner28.png') }}"
         data-ticket-image="{{ asset('img/Go Left Estelar.jpeg') }}"
         data-video="{{ asset('video/VideoLeft.mp4') }}"
         data-bases="{{ asset('docs/Bases-GoLeft.pdf') }}"

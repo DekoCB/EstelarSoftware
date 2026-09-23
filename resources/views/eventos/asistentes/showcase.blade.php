@@ -23,7 +23,7 @@
         data-nombre="{{ $evento->nombre }}"
         data-fecha="{{ optional($evento->fecha_inicio)->format('d/m/Y') ?? '' }}"
         data-descripcion="{{ $evento->descripcion ?? '' }}"
-        data-banner="{{ asset('img/Banner28.jpeg') }}"
+        data-banner="{{ asset('img/Banner28.png') }}"
         data-ticket-image="{{ asset('img/Go Left Estelar.jpeg') }}"
         data-video="{{ asset('video/VideoLeft.mp4') }}"
         data-bases="{{ asset('docs/Bases-GoLeft.pdf') }}"
