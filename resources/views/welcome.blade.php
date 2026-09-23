@@ -3192,6 +3192,11 @@
         if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeEvents();
     });
 
+    /* Al entrar a la pagina, el overlay de eventos se abre solo -sin
+     * esperar click en la moneda- para que la promo del evento sea lo
+     * primero que se ve. */
+    openEvents();
+
     /* El hover imagen/video y el boton "Copiar link" del boleto
      * "Go Left!!" ahora viven dentro del componente React (ver
      * resources/js/tear-ticket-mount.jsx) -este bloque vanilla ya no

@@ -108,6 +108,7 @@ function GoLeftTicket({ data }) {
 
   return (
     <div className="gl-ticket-wrap">
+      {!showTicket && (
       <FlipCard
         front={<GoLeftFront image={data.image} alt={`Evento ${data.nombre}`} onHover={setFrontHover} />}
         back={
@@ -160,6 +161,7 @@ function GoLeftTicket({ data }) {
         shadowOpacity={0.45}
         ariaLabel={`Voltear tarjeta del evento ${data.nombre}`}
       />
+      )}
 
       <GoLeftBgVideo video={data.video} active={frontHover} />
 
