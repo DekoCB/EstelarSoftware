@@ -1,13 +1,13 @@
 {
-  "_GoLeftShowcase-B8IH2Afq.css": {
-    "file": "assets/GoLeftShowcase-B8IH2Afq.css",
-    "src": "_GoLeftShowcase-B8IH2Afq.css"
+  "_GoLeftShowcase-7XFyjIw6.css": {
+    "file": "assets/GoLeftShowcase-7XFyjIw6.css",
+    "src": "_GoLeftShowcase-7XFyjIw6.css"
   },
-  "_GoLeftShowcase-awah1nzF.js": {
-    "file": "assets/GoLeftShowcase-awah1nzF.js",
+  "_GoLeftShowcase-CAxaD-Nk.js": {
+    "file": "assets/GoLeftShowcase-CAxaD-Nk.js",
     "name": "GoLeftShowcase",
     "css": [
-      "assets/GoLeftShowcase-B8IH2Afq.css"
+      "assets/GoLeftShowcase-7XFyjIw6.css"
     ]
   },
   "__commonjsHelpers-Cpj98o6Y.js": {
@@ -68,21 +68,21 @@
     ]
   },
   "resources/js/go-left-panel-mount.jsx": {
-    "file": "assets/go-left-panel-mount-CxoP-3J_.js",
+    "file": "assets/go-left-panel-mount-CUEXddbS.js",
     "name": "go-left-panel-mount",
     "src": "resources/js/go-left-panel-mount.jsx",
     "isEntry": true,
     "imports": [
-      "_GoLeftShowcase-awah1nzF.js"
+      "_GoLeftShowcase-CAxaD-Nk.js"
     ]
   },
   "resources/js/go-left-showcase-mount.jsx": {
-    "file": "assets/go-left-showcase-mount-D9zyWo5K.js",
+    "file": "assets/go-left-showcase-mount-sTWpTYr_.js",
     "name": "go-left-showcase-mount",
     "src": "resources/js/go-left-showcase-mount.jsx",
     "isEntry": true,
     "imports": [
-      "_GoLeftShowcase-awah1nzF.js"
+      "_GoLeftShowcase-CAxaD-Nk.js"
     ]
   },
   "resources/js/leaflet-setup.js": {

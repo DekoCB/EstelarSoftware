@@ -336,7 +336,18 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
               theme={isGoLeftTheme ? 'left4dead' : undefined}
               onActiveChange={setActiveSlide}
               slides={[
-                { id: 'go-left', title: data.nombre, image: data.banner, fecha: data.fecha, descripcion: data.descripcion, bases: data.bases },
+                {
+                  id: 'go-left',
+                  title: data.nombre,
+                  // El dorso de la card muestra el nombre completo del
+                  // torneo; el frente/caption sigue con el slogan corto
+                  // ("Go Left!!") que ya trae el arte del poster.
+                  tituloDetalle: 'Torneo Left4Dead edición Estelar',
+                  image: data.banner,
+                  fecha: data.fecha,
+                  descripcion: data.descripcion,
+                  bases: data.bases,
+                },
                 ...SOON_SLIDES,
               ]}
             />

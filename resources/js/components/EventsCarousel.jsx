@@ -90,7 +90,7 @@ function EventsCarousel({ slides, variant = 'default', theme, onActiveChange }) 
                       back={
                         <div className="evc-back">
                           <p className="evc-back-eyebrow">Detalles del evento</p>
-                          <h3 className="evc-back-title">{slide.title}</h3>
+                          <h3 className="evc-back-title">{slide.tituloDetalle || slide.title}</h3>
                           {slide.fecha && (
                             <p className="evc-back-fecha"><i className="fas fa-calendar" /> {slide.fecha}</p>
                           )}
@@ -109,6 +109,10 @@ function EventsCarousel({ slides, variant = 'default', theme, onActiveChange }) 
                               <i className="fas fa-file-pdf" /> Descargar Bases
                             </a>
                           )}
+                          <div className="evc-back-cta">
+                            <span className="evc-back-cta-text">MIRA ABAJO PARA INSCRIBIRTE</span>
+                            <i className="fas fa-chevron-down evc-back-cta-arrow" aria-hidden="true" />
+                          </div>
                           <p className="evc-back-hint"><i className="fas fa-rotate" /> Toca para volver</p>
                         </div>
                       }

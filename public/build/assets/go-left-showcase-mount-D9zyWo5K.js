@@ -1,1 +1,0 @@
-import{c as t,j as e,G as s}from"./GoLeftShowcase-awah1nzF.js";const o=document.getElementById("glsRoot");o&&t.createRoot(o).render(e.jsx(s,{data:{...o.dataset},heroMode:"plain",onClose:()=>{window.location.href="/"}}));
