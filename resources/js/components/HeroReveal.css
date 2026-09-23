@@ -1,0 +1,91 @@
+.hr-stage {
+  position: relative;
+  min-height: 100svh;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #000;
+}
+
+.hr-frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  will-change: clip-path;
+}
+
+/* Copia de la misma imagen, borrosa y ampliada (cover, sin recorte
+   visible por el blur) con un Ken Burns lento: rellena lo que el
+   `contain` de la imagen nitida en primer plano deja vacio a los
+   costados, en vez de dejarlo negro. */
+.hr-backdrop {
+  position: absolute;
+  inset: -10%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(48px) saturate(1.15) brightness(.55);
+  transform: scale(1.15);
+  animation: hrKenBurns 24s ease-in-out infinite alternate;
+}
+@keyframes hrKenBurns {
+  from { transform: scale(1.15) translate(0, 0) }
+  to   { transform: scale(1.3) translate(-1.5%, -1.5%) }
+}
+
+.hr-image {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.hr-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(0, 0, 0, .55) 0%, rgba(0, 0, 0, 0) 30%);
+}
+
+.hr-title {
+  position: absolute;
+  z-index: 3;
+  left: 6%;
+  right: 6%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 800;
+  font-size: clamp(32px, 7vw, 64px);
+  letter-spacing: .02em;
+  line-height: 1.05;
+  color: #fff;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, .5);
+  pointer-events: none;
+}
+
+.hr-hint {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: .03em;
+  color: rgba(255, 255, 255, .6);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hr-backdrop { animation: none }
+}

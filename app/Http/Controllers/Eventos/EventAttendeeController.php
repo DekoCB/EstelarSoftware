@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Eventos\StoreEventAttendeeRequest;
 use App\Models\Event;
 use App\Models\EventAttendee;
+use App\Support\QrGenerator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel;
@@ -22,6 +23,21 @@ class EventAttendeeController extends Controller
         return view('eventos.asistentes.inscripcion', compact('evento'));
     }
 
+    /**
+     * Pagina propia del evento (banner a pantalla completa + registro
+     * guiado + ticket flotante) — distinta del formulario generico de
+     * arriba, pensada para un evento puntual con su propia identidad
+     * visual (hoy: "Go Left!!").
+     */
+    public function showcase(Event $evento)
+    {
+        if ($evento->estado === 'cancelado') {
+            abort(404);
+        }
+
+        return view('eventos.asistentes.showcase', compact('evento'));
+    }
+
     public function store(StoreEventAttendeeRequest $request, Event $evento)
     {
         if ($evento->estado === 'cancelado') {
@@ -29,6 +45,23 @@ class EventAttendeeController extends Controller
         }
 
         $asistente = $this->registrar($evento, $request->validated(), auth()->id());
+
+        // La pagina "showcase" pide JSON (fetch con Accept: application/
+        // json) para armar el ticket sin recargar; el formulario generico
+        // de eventos.asistentes.inscripcion sigue mandando un POST normal
+        // y recibe el redirect de siempre -mismo endpoint, dos clientes-.
+        if ($request->wantsJson()) {
+            $mensajeWhatsapp = "Aquí está mi entrada para *{$evento->nombre}*:\n"
+                . route('eventos.inscripcion.ticket', [$evento, $asistente]);
+
+            return response()->json([
+                'codigo'           => $asistente->codigo,
+                'qr_svg'           => QrGenerator::svg($asistente->qr_token, 130),
+                'nombre_asistente' => $asistente->nombres,
+                'ticket_url'       => route('eventos.inscripcion.ticket', [$evento, $asistente]),
+                'whatsapp_url'     => 'https://wa.me/51977765710?text=' . urlencode($mensajeWhatsapp),
+            ], 201);
+        }
 
         return redirect()->route('eventos.inscripcion.ticket', [$evento, $asistente]);
     }

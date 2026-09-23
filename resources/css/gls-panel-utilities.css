@@ -1,0 +1,8 @@
+/* Solo utilidades de Tailwind, sin @tailwind base (Preflight) ni
+   @layer components: el landing (welcome.blade.php) tiene su propio
+   CSS a mano de ~5000 lineas, nunca pensado para convivir con el
+   reset de Tailwind. GoLeftShowcase.jsx (panel de Eventos) usa clases
+   de utilidad sueltas -mismas que ya carga app.css en la pagina
+   standalone del evento-, así que esto le alcanza sin arriesgar nada
+   del resto del landing. */
+@tailwind utilities;

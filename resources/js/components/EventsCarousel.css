@@ -1,0 +1,265 @@
+.evc-root {
+  width: 100%;
+}
+
+.evc-viewport {
+  overflow: hidden;
+}
+
+.evc-track {
+  display: flex;
+  touch-action: pan-y;
+}
+
+.evc-slide {
+  position: relative;
+  flex: 0 0 62%;
+  min-width: 0;
+  padding: 0 8px;
+}
+/* El porcentaje de cada slide tiene que sumar MAS de 100% entre todos
+   -si 3 slides caben justo (p.ej. 30% x 3 = 90%), el track nunca
+   desborda .evc-viewport y no queda nada por desplazar: embla no
+   tiene a donde "scrollear" y los botones/paginacion quedan muertos-. */
+@media (min-width: 640px) { .evc-slide { flex-basis: 46% } }
+@media (min-width: 900px) { .evc-slide { flex-basis: 38% } }
+
+.evc-frame {
+  position: relative;
+  height: 220px;
+  border-radius: 24px;
+  overflow: hidden;
+  will-change: clip-path;
+}
+
+.evc-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, .045) 0 10px, transparent 10px 20px),
+    #0f172a;
+  border: 1px solid rgba(255, 255, 255, .08);
+  color: rgba(255, 255, 255, .3);
+  font-size: 30px;
+}
+
+.evc-image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* object-position:center (el default) recorta parejo arriba/abajo;
+     el arte del banner tiene el logo/titulo pegado arriba, asi que
+     ancla el recorte ahi -si algo se pierde, que sea la franja de
+     abajo, no la de arriba-. */
+  object-position: top;
+  transform: scale(1.05);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* FlipCard (front=imagen, back=detalles) reemplaza a .evc-image en el
+   slide actual -ver EventsCarousel.jsx-. Llena el marco entero: sus
+   propias --fc-w/--fc-h (pensadas para un tamano fijo en px) se pisan
+   aca para que en cambio ocupe el 100% del .evc-frame responsive. */
+.evc-frame .flip-card {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+.evc-frame .flip-card .evc-image { position: static; transform: none }
+.evc-back {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 8% 9%;
+  background:
+    radial-gradient(circle at 20% 15%, rgba(200, 31, 43, .18), transparent 55%),
+    #0a0705;
+}
+.evc-back-eyebrow {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #e0263f;
+}
+.evc-back-title {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 800;
+  font-size: clamp(18px, 3vw, 26px);
+  color: #fff;
+}
+.evc-back-fecha {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, .7);
+}
+.evc-back-desc {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, .55);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+}
+.evc-back-bases {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(224, 38, 63, .45);
+  background: rgba(224, 38, 63, .12);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+.evc-back-bases:hover {
+  background: rgba(224, 38, 63, .24);
+  border-color: rgba(224, 38, 63, .7);
+}
+.evc-back-bases i { color: #e0263f; font-size: 13px }
+
+.evc-back-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: rgba(255, 255, 255, .35);
+}
+
+.evc-caption {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: rgba(255, 255, 255, .55);
+}
+
+/* ── variant="hero": reemplaza al banner principal del evento ───────
+   Mismo carrusel, mas alto y con menos slides visibles a la vez -se
+   siente a banner, no a fila de miniaturas-. Los porcentajes son mas
+   chicos que en la version anterior a proposito: con 52% cada uno, 3
+   tarjetas superaban por mucho el ancho del contenedor y las vecinas
+   quedaban recortadas a la mitad contra el borde -no se veian
+   "cortadas por diseño" (el clip-path vertical, que es intencional),
+   sino literalmente tapadas por .evc-viewport. Con ~36% las tres
+   entran casi enteras (pequeño desborde a proposito para que quede
+   claro que hay mas para el lado).
+   El max-width del contenedor tambien subio (1120 -> 1600): con 36%
+   de un contenedor angosto, el marco quedaba mas angosto que alto que
+   la imagen real (retrato, 1080x1440 = ratio .75) y object-fit:cover
+   recortaba los COSTADOS para llenarlo. Con mas ancho absoluto el
+   marco se acerca a ese ratio y el recorte lateral practicamente
+   desaparece (ver tambien object-position:top en .evc-image, que ya
+   evita que se pierda la parte de arriba si algo se recorta). */
+.evc-root--hero { max-width: 1600px; margin: 0 auto }
+.evc-root--hero .evc-slide { flex-basis: 78% }
+@media (min-width: 640px) { .evc-root--hero .evc-slide { flex-basis: 52% } }
+@media (min-width: 900px) { .evc-root--hero .evc-slide { flex-basis: 36% } }
+/* height mas alta que antes (700 -> 820) a proposito: con 36% de 1600px
+   de ancho (576px), para que el marco calce con el ratio real de la
+   imagen (retrato, .75) sin recortar ni costados ni abajo, necesita
+   ~768px de alto (576 / .75). 820 deja un poco de margen. */
+.evc-root--hero .evc-frame {
+  height: min(85vh, 820px);
+}
+.evc-root--hero .evc-caption {
+  margin-top: 18px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(22px, 4vw, 36px);
+  letter-spacing: .03em;
+  color: #fff;
+}
+
+/* theme="left4dead" (prop de EventsCarousel): las tarjetas
+   "Proximamente" dejan el rayado azulado generico y pasan a un
+   degrade rojo/negro acorde al arte del evento -por ahora solo Go
+   Left!! usa este theme; eventos futuros podrian traer el suyo-. */
+.evc-root--theme-left4dead .evc-placeholder {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(200, 31, 43, .16), transparent 55%),
+    radial-gradient(circle at 75% 80%, rgba(107, 15, 15, .22), transparent 60%),
+    #0a0705;
+  border-color: rgba(200, 31, 43, .22);
+  color: rgba(255, 255, 255, .32);
+}
+.evc-root--theme-left4dead .evc-dot.is-active { background: #e0263f }
+
+.evc-nav {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+.evc-arrow {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .06);
+  color: rgba(255, 255, 255, .75);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease;
+}
+.evc-arrow:hover { background: rgba(255, 255, 255, .14); color: #fff }
+
+.evc-dots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.evc-dot {
+  width: 7px;
+  height: 7px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .2);
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+.evc-dot.is-active {
+  background: #73c6f5;
+  transform: scale(1.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .evc-dot { transition: none }
+}

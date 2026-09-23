@@ -5,11 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ESTELAR - Software Empresarial</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    {{-- Unico punto de entrada React de todo el sitio: el boleto "Go Left!!"
-         (TearTicket) dentro del overlay de eventos. Todo lo demas en esta
-         pagina sigue siendo Blade + JS vanilla. --}}
-    @viteReactRefresh
-    @vite(['resources/js/tear-ticket-mount.jsx'])
     <link rel="icon" type="image/png" href="img/logo_final.png">
     <link rel="shortcut icon" type="image/png" href="img/logo_final.png">
     <link rel="apple-touch-icon" href="img/logo_final.png">
@@ -488,8 +483,9 @@
      * con el icono de ESTELAR en blanco de cara. Al hover acelera el giro
      * 1s exacto y se detiene mostrando la CARA DE ATRAS de la moneda
      * -literal: rotateY(180deg)-, que lleva el texto "EVENTOS" con un
-     * destello. Siempre es pulsable de entrada -en tactil no hay hover-
-     * asi que el click abre el overlay sin depender de la animacion.
+     * destello. Sigue siendo un <a href> real (fallback si el JS no
+     * cargo); con JS el click abre el panel deslizante en vez de
+     * navegar -ver el listener de click mas abajo-.
      *
      * 3D de verdad, no solo dos caras planas: las dos caras se separan a
      * lo largo del eje Z (translateZ +-espesor/2) y el hueco entre ambas
@@ -560,135 +556,10 @@
     .lk-coin.is-settled .lk-coin-face--b::after { animation: none }
     }
 
-    /* ── Overlay de eventos: recuadros centrados y sobrepuestos ────────── */
-    .ev-overlay {
-    position: fixed; inset: 0; z-index: 2000;
-    display: flex; align-items: center; justify-content: center;
-    padding: var(--pg-gutter);
-    opacity: 0; visibility: hidden;
-    transition: opacity .3s ease, visibility 0s linear .3s;
-    }
-    .ev-overlay.is-open { opacity: 1; visibility: visible; transition: opacity .3s ease }
-    .ev-backdrop {
-    position: absolute; inset: 0;
-    background: rgba(4, 6, 14, .82);
-    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-    }
-    /* Fondo de pantalla con el video del evento al pasar el mouse sobre
-     * la card (ver #evVideoBg + GoLeftBgVideo). Vive sobre .ev-backdrop
-     * -mismo apilamiento sin z-index explicito, solo orden en el DOM- y
-     * bajo .ev-panel -ese si lleva z-index:1-, asi que el ticket y el
-     * texto siguen legibles encima. pointer-events:none: es puramente
-     * decorativo, nunca debe robarle el hover/click a lo de abajo. */
-    .ev-video-bg {
-    position: absolute; inset: 0; overflow: hidden; pointer-events: none;
-    }
-    .ev-video-bg-el {
-    position: absolute; inset: -30px;
-    width: calc(100% + 60px); height: calc(100% + 60px);
-    object-fit: cover;
-    filter: blur(28px) brightness(.55) saturate(1.15);
-    /* El blur real (28px) desenfoca los bordes del propio video contra
-     * el fondo -sin el inset:-30px de sobra, esa costura se veria como
-     * un marco nitido alrededor de una imagen borrosa-. */
-    opacity: 0;
-    transition: opacity .5s ease;
-    }
-    .ev-video-bg-el.is-active { opacity: 1 }
-    @media (prefers-reduced-motion: reduce) {
-    .ev-video-bg-el { transition: none }
-    }
-    .ev-panel {
-    position: relative; z-index: 1;
-    max-width: 1040px; width: 100%; max-height: 96vh;
-    /* auto (no "hidden"): el boleto/formulario que aparecen a la derecha
-     * (scroll horizontal, ver GoLeftTicket.css) pueden superar el alto
-     * disponible en pantallas bajas, y con "hidden" ese sobrante quedaba
-     * inalcanzable, sin forma de llegar a el. scrollbar-gutter:stable
-     * reserva el carril siempre -aunque no haga falta scrollear todavia-
-     * para que la scrollbar no dispare un salto de layout al aparecer.
-     * max-height en 96vh (no 92) y menos padding/margenes abajo: la
-     * FlipCard vertical necesita mas alto que el carrusel horizontal
-     * original, asi que se le da todo el aire posible para que el scroll
-     * vertical sea la excepcion, no la norma. */
-    overflow-y: auto; scrollbar-gutter: stable;
-    padding-block: 18px;
-    display: flex; flex-direction: column; align-items: center;
-    transform: translateY(16px) scale(.97);
-    transition: transform .35s cubic-bezier(.22, 1, .36, 1);
-    }
-    .ev-overlay.is-open .ev-panel { transform: translateY(0) scale(1) }
-    /* Fijo al overlay (ver nota en el HTML), no al panel que scrollea. */
-    .ev-close {
-    position: absolute; top: var(--pg-gutter); right: var(--pg-gutter); z-index: 3;
-    width: 42px; height: 42px; border-radius: 50%; border: 0; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    background: #000; color: #fff; font-size: 15px;
-    box-shadow: inset 0 0 0 var(--pg-hair) rgba(255, 255, 255, .3), 0 6px 20px rgba(0, 0, 0, .5);
-    }
-    .ev-heading {
-    position: relative; z-index: 2;
-    font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 700;
-    letter-spacing: .1em; text-transform: uppercase; color: #fff;
-    margin-bottom: 18px;
-    }
-
-    /* ── Mazo de tarjetas (CardSwap) + flechas de navegacion, a lo
-     * Fortnite: tarjeta activa al centro, las demas apiladas detras en
-     * abanico, con flechas circulares a los lados. Con un solo evento las
-     * flechas quedan ocultas -no hay a donde navegar- y la pila se ve
-     * como una tarjeta suelta. */
-    .ev-stack-wrap { display: flex; align-items: center; justify-content: center; gap: 22px; margin-top: 14px }
-    .ev-nav {
-    flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; border: 0; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    background: rgba(255, 255, 255, .06); color: #fff; font-size: 16px;
-    box-shadow: inset 0 0 0 var(--pg-hair) rgba(255, 255, 255, .28);
-    transition: background .25s ease, transform .25s ease;
-    }
-    .ev-nav:hover { background: var(--blue-glow); color: #04101f; transform: scale(1.08) }
-    .ev-nav[hidden] { display: none }
-
-    .ev-stack { position: relative; width: 800px; height: 560px; perspective: 900px }
-    .ev-card {
-    position: absolute; top: 50%; left: 50%;
-    width: 800px; height: 560px;
-    background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px;
-    overflow: hidden; -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-    transform-style: preserve-3d; will-change: transform;
-    backface-visibility: hidden; -webkit-backface-visibility: hidden;
-    cursor: pointer;
-    }
-    /* Boleto "Go Left!!" (TearTicket, React): el mount se queda sin el
-     * fondo/borde/overflow de .ev-card -el boleto ya trae su propio
-     * papel, y el panel que aparece al arrancar (ver GoLeftTicket.css)
-     * necesita poder crecer hacia abajo sin que .ev-card se lo recorte. */
-    .ev-ticket-mount {
-    background: transparent; border: 0; overflow: visible; cursor: default;
-    /* align-items empieza en flex-start, no center: centrado verticalmente
-     * crecia hacia ARRIBA ademas de abajo en cuanto el contenido de React
-     * superaba el alto fijo de la card (FlipCard + formulario + boleto
-     * mini, al pulsar "Registrarse"), montandose sobre "EVENTOS". Anclado
-     * arriba, ese crecimiento extra queda todo hacia abajo -para lo que
-     * ya esta el overflow:auto puntual de .ev-panel-. */
-    display: flex; align-items: flex-start; justify-content: center;
-    }
-
-    /* Recuadro "Proximamente": mismo tamaño de tarjeta, sin media, solo
-     * el aviso centrado. */
-    .ev-card--soon { display: flex; align-items: center; justify-content: center }
-    .ev-soon {
-    font-family: 'Orbitron', sans-serif; font-size: 26px; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--pg-dim, rgba(255, 255, 255, .5));
-    border: 1px dashed var(--border); border-radius: 14px; padding: 40px 52px;
-    }
-
-    @media (max-width: 480px) {
-    .ev-stack, .ev-card { width: 300px; height: 490px }
-    .ev-nav { width: 38px; height: 38px; font-size: 13px }
-    .ev-stack-wrap { gap: 10px }
-    .ev-heading { font-size: 22px; margin-bottom: 30px }
-    }
+    /* El overlay/carrusel de Eventos (CardSwap + FlipCard) se retiro: la
+     * moneda ahora es un link directo a la pagina propia del evento
+     * (target="_blank"), ver #eventsCoin mas abajo y
+     * resources/views/eventos/asistentes/showcase.blade.php. */
 
     /* ══ Las tablas de breakpoints ══════════════════════════════════════
      * Nada de lo de arriba es fluido — cada medida es un pixel, asi que una
@@ -2476,6 +2347,9 @@
     }
     @media (prefers-reduced-motion: reduce) { .stats-notice-dot { animation: none } }
     </style>
+
+    @viteReactRefresh
+    @vite(['resources/css/gls-panel-utilities.css', 'resources/js/go-left-panel-mount.jsx'])
     </head>
     <body>
     <div class="main-container"><nav id="navbar">
@@ -2999,78 +2873,38 @@
     </nav>
 
     <!-- Moneda "Eventos": esquina inferior izquierda. Cuelga del body igual
-         que .lk-social. Logica completa (spin, sprint de hover, overlay)
-         en el <script> de abajo. -->
-    <button type="button" class="lk-coin" id="eventsCoin" aria-haspopup="dialog" aria-controls="eventsOverlay" aria-label="Ver eventos">
+         que .lk-social. El href apunta a la pagina propia del evento -ver
+         resources/views/eventos/asistentes/showcase.blade.php-, que sigue
+         sirviendo de fallback sin JS/compartible; con JS el click se
+         intercepta (mas abajo) y en su lugar abre el panel deslizante
+         montado en #eventsPanelRoot (resources/js/go-left-panel-mount.jsx).
+         Sin evento real todavia no hay a donde enlazar, asi que no se
+         pinta. Logica de spin/sprint de hover en el <script> de abajo. -->
+    @if($goLeftEvent)
+    <a href="{{ route('eventos.showcase', $goLeftEvent) }}" class="lk-coin" id="eventsCoin" aria-label="Ver eventos">
     <span class="lk-coin-spin" aria-hidden="true">
         <span class="lk-coin-edge" id="coinEdge"></span>
         <span class="lk-coin-face lk-coin-face--a"><img src="img/logo_icon_white.png" alt="" loading="lazy"></span>
         <span class="lk-coin-face lk-coin-face--b">Eventos</span>
     </span>
-    </button>
-
-    <!-- Overlay de eventos: recuadros centrados y sobrepuestos al abrir la moneda. -->
-    <div class="ev-overlay" id="eventsOverlay" role="dialog" aria-modal="true" aria-label="Eventos">
-    <div class="ev-backdrop" data-ev-close></div>
-    <!-- Destino de un portal de React (ver GoLeftBgVideo en
-         tear-ticket-mount.jsx): al pasar el mouse sobre la card, el
-         video del evento se reproduce aqui, de fondo y difuminado.
-         Fuera de .ev-panel a proposito -.ev-panel anima con
-         transform:scale/translateY, y eso vuelve "fixed" a cualquier
-         descendiente en un position:absolute relativo a el, no al
-         viewport-. Como hermano de .ev-backdrop, en cambio, sigue
-         siendo un position:fixed real sobre toda la pantalla. -->
-    <div class="ev-video-bg" id="evVideoBg"></div>
-    <!-- Fuera de .ev-panel a proposito: si el panel scrollea, un boton
-         posicionado con offsets negativos dentro de el queda recortado
-         por su propio overflow. Aqui, fijo al overlay, nunca se corta. -->
-    <button type="button" class="ev-close" data-ev-close aria-label="Cerrar eventos"><i class="fas fa-times"></i></button>
-    <div class="ev-panel">
-        <p class="ev-heading">Eventos</p>
-
-        <div class="ev-stack-wrap">
-        <button type="button" class="ev-nav ev-nav--prev" id="evPrev" aria-label="Evento anterior" hidden><i class="fas fa-chevron-left"></i></button>
-
-        <!-- Mazo de tarjetas (CardSwap, adaptado de React Bits a JS vanilla
-             -ver initCardSwap-). "Go Left!!" es un boleto TearTicket
-             (React, ver resources/js/tear-ticket-mount.jsx) montado
-             dentro de este div -.ev-ticket-mount le quita el fondo/borde
-             de .ev-card porque el boleto ya trae el suyo propio-. Para
-             sumar otro evento con boleto e inscripcion real: crea su
-             Event (nombre, fecha_inicio, descripcion) desde el modulo
-             Eventos del ERP, pasalo a esta vista igual que $goLeftEvent
-             en routes/web.php, y duplica este div con sus propios
-             data-*. -->
-        <div class="ev-stack" id="evStack">
-            <div class="ev-card ev-ticket-mount" id="tearTicketRoot"
-                data-nombre="{{ $goLeftEvent->nombre ?? 'Go Left!!' }}"
-                data-fecha="{{ optional($goLeftEvent?->fecha_inicio)->format('d/m/Y') ?? '28/09/2026' }}"
-                data-descripcion="{{ $goLeftEvent->descripcion ?? 'Descripción del evento pendiente de completar.' }}"
-                data-image="img/Banner28.jpeg"
-                data-ticket-image="img/Go Left Estelar.jpeg"
-                data-video="video/VideoLeft.mp4"
-                @if($goLeftEvent)
-                data-action="{{ route('eventos.inscripcion.store', $goLeftEvent) }}"
-                data-csrf="{{ csrf_token() }}"
-                @endif
-            ></div>
-
-            <!-- Segundo recuadro: sin fecha confirmada todavia, solo el aviso. -->
-            <article class="ev-card ev-card--soon">
-            <div class="ev-soon"><span>Pr&oacute;ximamente</span></div>
-            </article>
-        </div>
-
-        <button type="button" class="ev-nav ev-nav--next" id="evNext" aria-label="Siguiente evento" hidden><i class="fas fa-chevron-right"></i></button>
-        </div>
-    </div>
-    </div>
+    </a>
+    <div id="eventsPanelRoot"
+        data-nombre="{{ $goLeftEvent->nombre }}"
+        data-fecha="{{ optional($goLeftEvent->fecha_inicio)->format('d/m/Y') ?? '' }}"
+        data-descripcion="{{ $goLeftEvent->descripcion ?? '' }}"
+        data-banner="{{ asset('img/Banner28.jpeg') }}"
+        data-ticket-image="{{ asset('img/Go Left Estelar.jpeg') }}"
+        data-video="{{ asset('video/VideoLeft.mp4') }}"
+        data-bases="{{ asset('docs/Bases-GoLeft.pdf') }}"
+        data-action="{{ route('eventos.inscripcion.store', $goLeftEvent) }}"
+        data-csrf="{{ csrf_token() }}"
+    ></div>
+    @endif
     <script>
-    /* ---- MONEDA "EVENTOS" + OVERLAY ---- */
+    /* ---- MONEDA "EVENTOS": gira, acelera al pasar el mouse ---- */
     (function () {
     const coin = document.getElementById('eventsCoin');
-    const overlay = document.getElementById('eventsOverlay');
-    if (!coin || !overlay) return;
+    if (!coin) return;
 
     /* Canto de la moneda: N franjas angostas en abanico alrededor del eje
      * Y, cada una a la misma distancia del centro (el radio) para formar
@@ -3127,11 +2961,7 @@
     });
 
     /* Sprint de 1s al hover, la moneda se asienta mostrando "EVENTOS"
-     * (cara de atras) como adelanto. Pero solo se queda quieta de verdad
-     * mientras el overlay esta abierto: si no se entra a Eventos, vuelve
-     * a girar sola a los 2s de asentarse. El click esta activo desde el
-     * primer momento -en tactil no hay hover- para que abrir el overlay
-     * nunca dependa de completar la animacion. */
+     * (cara de atras) como adelanto, y vuelve a girar sola a los 2s. */
     let sprinting = false;
     let settled = false;
     let revertTimer = null;
@@ -3142,9 +2972,7 @@
         sprinting = false;
         settled = true;
         clearTimeout(revertTimer);
-        revertTimer = setTimeout(() => {
-        if (!overlay.classList.contains('is-open')) resumeSpin();
-        }, 2000);
+        revertTimer = setTimeout(resumeSpin, 2000);
     }
     function resumeSpin() {
         clearTimeout(revertTimer);
@@ -3160,136 +2988,15 @@
         setTimeout(settleCoin, 1000);
     });
 
-    /* Este script corre antes que el <script src=".../gsap.min.js"> de mas
-     * abajo en el documento, asi que window.gsap todavia no existe en este
-     * punto. Si ya esta cargado (cache, script duplicado, etc.) se inicia
-     * de una; si no, se espera al load de la pagina -momento en el que
-     * todo recurso externo ya termino- para intentarlo recien ahi. */
-    let cardSwap = null;
-    if (window.gsap) {
-        cardSwap = initCardSwap();
-    } else {
-        window.addEventListener('load', () => { cardSwap = initCardSwap(); });
-    }
-
-    function openEvents() {
-        overlay.classList.add('is-open');
-        document.body.style.overflow = 'hidden';
-        clearTimeout(revertTimer);
-        coin.classList.remove('is-fast');
-        coin.classList.add('is-settled');
-        sprinting = false;
-        settled = true;
-    }
-    function closeEvents() {
-        overlay.classList.remove('is-open');
-        document.body.style.overflow = '';
-        resumeSpin();
-    }
-    coin.addEventListener('click', openEvents);
-    overlay.querySelectorAll('[data-ev-close]').forEach((el) => el.addEventListener('click', closeEvents));
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && overlay.classList.contains('is-open')) closeEvents();
+    /* El click ya no navega: abre el panel de Eventos (React, montado en
+     * #eventsPanelRoot por resources/js/go-left-panel-mount.jsx), que
+     * se desliza desde la derecha sobre el propio landing. El href
+     * sigue apuntando a la pagina standalone del evento como fallback
+     * si el JS no llegó a cargar. */
+    coin.addEventListener('click', e => {
+        e.preventDefault();
+        document.dispatchEvent(new CustomEvent('eventos:open'));
     });
-
-    /* El hover imagen/video y el boton "Copiar link" del boleto
-     * "Go Left!!" ahora viven dentro del componente React (ver
-     * resources/js/tear-ticket-mount.jsx) -este bloque vanilla ya no
-     * tiene ningun .ev-media ni [data-ev-copy] que encontrar. Si en el
-     * futuro se agregan mas eventos SIN boleto (tarjetas simples, como
-     * "Proximamente"), su propio hover de imagen se cablearia aqui. */
-
-    /* ---- MAZO DE TARJETAS (CardSwap, port de React Bits a JS vanilla) ----
-     * Misma coreografia GSAP del componente original: la tarjeta de
-     * adelante cae, las de atras se corren un puesto y esa tarjeta vuelve
-     * a colarse al fondo del mazo. Con 1 solo evento no hay nada que
-     * rotar -swap() se queda quieta- y las flechas de navegacion quedan
-     * ocultas; llega ya cableado para cuando haya mas de un evento. */
-    function initCardSwap() {
-        const stack = document.getElementById('evStack');
-        const prevBtn = document.getElementById('evPrev');
-        const nextBtn = document.getElementById('evNext');
-        if (!stack || !window.gsap) return null;
-        const gsap = window.gsap;
-
-        const cards = Array.from(stack.children);
-        const total = cards.length;
-        if (!total) return null;
-
-        prevBtn.hidden = nextBtn.hidden = total < 2;
-
-        const CARD_DISTANCE = 34, VERTICAL_DISTANCE = 16, SKEW = 3;
-        const config = { ease: 'elastic.out(0.6,0.9)', durDrop: 1, durMove: 1, durReturn: 1, promoteOverlap: 0.9, returnDelay: 0.05 };
-
-        const makeSlot = (i) => ({ x: i * CARD_DISTANCE, y: -i * VERTICAL_DISTANCE, z: -i * CARD_DISTANCE * 1.5, zIndex: total - i });
-        const placeNow = (el, slot) => gsap.set(el, {
-        x: slot.x, y: slot.y, z: slot.z, xPercent: -50, yPercent: -50,
-        skewY: SKEW, transformOrigin: 'center center', zIndex: slot.zIndex, force3D: true,
-        });
-
-        let order = cards.map((_, i) => i);
-        cards.forEach((el, i) => placeNow(el, makeSlot(i)));
-
-        /* Recentrado dinamico: gsap.set({xPercent:-50, yPercent:-50})
-         * calcula el desplazamiento contra el TAMAÑO DEL ELEMENTO en el
-         * momento del .set() de arriba -que corre una sola vez, aqui,
-         * al cargar la pagina-. El boleto "Go Left!!" (React, dentro de
-         * esta card) cambia de alto segun su propio estado -Registrarse
-         * hace entrar el ticket, desglosarlo revela el formulario- y
-         * sin repetir placeNow() contra el tamaño ACTUAL, la card queda
-         * centrada contra el tamaño que tenia al cargar, no el de
-         * ahora: por eso sobraba/faltaba espacio segun la seccion.
-         * React monta ese contenido de forma asincrona (createRoot().
-         * render() corre despues de este script), asi que un
-         * MutationObserver agarra el nodo en cuanto aparece y recien
-         * ahi se engancha el ResizeObserver que dispara el recentrado. */
-        const recenter = () => cards.forEach((el, i) => {
-        const idx = order.indexOf(i);
-        if (idx !== -1) placeNow(el, makeSlot(idx));
-        });
-        let recenterRaf = 0;
-        const scheduleRecenter = () => {
-        cancelAnimationFrame(recenterRaf);
-        recenterRaf = requestAnimationFrame(recenter);
-        };
-        cards.forEach(el => {
-        const attach = (node) => new ResizeObserver(scheduleRecenter).observe(node);
-        const existing = el.querySelector('.gl-ticket-wrap');
-        if (existing) { attach(existing); return; }
-        const mo = new MutationObserver(() => {
-            const wrap = el.querySelector('.gl-ticket-wrap');
-            if (wrap) { attach(wrap); mo.disconnect(); }
-        });
-        mo.observe(el, { childList: true });
-        });
-
-        function swap() {
-        if (order.length < 2) return;
-        const [front, ...rest] = order;
-        const elFront = cards[front];
-        const tl = gsap.timeline();
-        tl.to(elFront, { y: '+=380', duration: config.durDrop, ease: config.ease });
-        tl.addLabel('promote', `-=${config.durDrop * config.promoteOverlap}`);
-        rest.forEach((idx, i) => {
-            const el = cards[idx];
-            const slot = makeSlot(i);
-            tl.set(el, { zIndex: slot.zIndex }, 'promote');
-            tl.to(el, { x: slot.x, y: slot.y, z: slot.z, duration: config.durMove, ease: config.ease }, `promote+=${i * 0.12}`);
-        });
-        const backSlot = makeSlot(total - 1);
-        tl.addLabel('return', `promote+=${config.durMove * config.returnDelay}`);
-        tl.call(() => gsap.set(elFront, { zIndex: backSlot.zIndex }), undefined, 'return');
-        tl.to(elFront, { x: backSlot.x, y: backSlot.y, z: backSlot.z, duration: config.durReturn, ease: config.ease }, 'return');
-        tl.call(() => { order = [...rest, front]; });
-        }
-
-        /* 100% manual: sin setInterval. Solo cambia de tarjeta al pulsar
-         * una flecha. */
-        prevBtn.addEventListener('click', swap);
-        nextBtn.addEventListener('click', swap);
-
-        return { swap };
-    }
     })();
 
     /* ---- MOBILE NAV ---- */

@@ -416,6 +416,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 // ── Inscripción pública a eventos (sin login) ────────────────────────
+Route::get('/eventos/{evento}/vista', [EventAttendeeController::class, 'showcase'])
+    ->name('eventos.showcase');
+
 Route::get('/eventos/{evento}/inscripcion', [EventAttendeeController::class, 'create'])
     ->name('eventos.inscripcion.create');
 

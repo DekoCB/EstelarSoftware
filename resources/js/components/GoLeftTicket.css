@@ -1,272 +1,509 @@
-/* Envoltorio propio para el boleto "Go Left!!" de la landing: una
-   FlipCard (React Bits) de frente/reverso -imagen del evento, luego su
-   detalle y los botones de accion-. "Registrarse" hace entrar al
-   TearTicket con su propia animacion (entra desde la derecha girando);
-   recien al arrancarlo aparece, tambien a la derecha, el formulario real
-   del torneo.
-   Fila, no columna: apilar todo hacia abajo (version anterior) hacia
-   afuera del alto fijo de .ev-card (480px) via overflow:visible sigue
-   contando como "contenido" para el overflow escrolleable de .ev-panel
-   -hueco vacio enorme debajo del formulario, sin nada ahi-. En fila el
-   crecimiento es horizontal: se abraza con ancho fijo por pieza (nada
-   de encoger para caber) y scroll horizontal en vez de pelear por el
-   overflow vertical. */
-.gl-ticket-wrap {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
-  width: 100%;
-  min-width: 0;
-  /* Contrarresta el skewY(3deg) que CardSwap le aplica a .ev-card (el
-     "abanico" del mazo, en welcome.blade.php/initCardSwap). Esta card
-     no tiene fondo ni borde propios (.ev-ticket-mount los quita), asi
-     que ese sesgo no se ve en nada aqui -pero SI infla la caja delimi-
-     tadora que getBoundingClientRect reporta para todo lo de adentro,
-     proporcional al ancho del contenido (ancho*tan(3°)). Eso, no un
-     hueco real, era el "espacio vacio" que quedaba debajo al desglosar
-     el ticket: mientras mas ancho el contenido (el ticket a 720px, la
-     fila entera mas todavia), mas alto de mas media el navegador. */
-  transform: skewY(-3deg);
-}
-/* Antes de "Registrarse" -solo la FlipCard- se ve centrada como
-   siempre; en cuanto el ticket entra, se ancla a la izquierda para que
-   todo lo nuevo crezca hacia la derecha (scrollear, no re-centrar). */
-.gl-ticket-wrap:has(.gl-ticket-enter) {
-  justify-content: flex-start;
-}
-/* flex-shrink:0 en cada pieza: sin esto flexbox las encoge para intentar
-   caber en el ancho visible, exactamente lo que no queremos ahora que
-   el ancho real se resuelve con scroll. */
-.gl-ticket-wrap > * {
-  flex-shrink: 0;
+/* Estilos compartidos por GoLeftShowcase.jsx, montado en dos lugares:
+   la pagina standalone /eventos/{id}/vista (go-left-showcase-mount.jsx,
+   heroMode="plain") y el panel deslizante del landing
+   (go-left-panel-mount.jsx, heroMode="reveal"). CTA, formulario,
+   ticket -TearTicket, sin tocar- y comprobante son identicos en ambos
+   modos; solo cambia el hero (heroMode="reveal" usa EventsCarousel.jsx
+   variant="hero"). Reemplaza el overlay/FlipCard que vivia antes
+   dentro del landing. */
+
+.gls-page {
+  min-height: 100vh;
+  background: #000;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
-/* La FlipCard fija su tamano en px via custom properties inline
-   (--fc-w/--fc-h); en el breakpoint movil de .ev-card (300x490) se
-   sobreescriben con !important -un inline style solo cede ante eso. */
-@media (max-width: 480px) {
-  .gl-ticket-wrap .flip-card {
-    --fc-w: 300px !important;
-    --fc-h: 400px !important;
-  }
-}
-
-/* ── Frente de la FlipCard: solo la imagen -el video ahora es un fondo
-   de pantalla aparte, ver .ev-video-bg en welcome.blade.php-. Este div
-   solo existe para detectar el hover que lo dispara. ────────────────── */
-.gl-front {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-.gl-front img { position: absolute; inset: 0 }
-
-/* ── Reverso de la FlipCard: detalle del evento + acciones ────────── */
-.gl-back {
-  position: absolute;
+/* heroMode="reveal": el negro liso de .gls-page lo reemplaza
+   <PredictiveArc> (Originkit, resources/js/components/originkit/ui/
+   predictive-arc.tsx — componente WebGL propio, sin runtime externo,
+   ver .originkit/INSTRUCTIONS.md). Se porta a document.body (mismo
+   motivo que .gls-ticket-overlay: `.events-panel` tiene un transform
+   -el deslizado- que romperia su position:fixed), fijo detras de todo
+   el contenido scrolleable. Las secciones que antes pintaban su propio
+   fondo casi-negro (#06080f) pasan a transparent para que el arco se
+   vea parejo en toda la pagina, no solo arriba. `.events-panel` -ver
+   go-left-panel-mount.jsx- tambien pasa a transparent y con z-index
+   explicito por encima del arco (ambos son hermanos sueltos de
+   document.body tras el portal: sin z-index a proposito, el orden en
+   el DOM decidiria y no es fiable). Solo en este modo -"por ahora solo
+   para este evento", igual que el theme="left4dead" del carrusel-;
+   .gls-page (heroMode="plain", la pagina standalone) sigue con el
+   negro solido de siempre. */
+.gls-page--arc { background: transparent }
+.gls-arc-bg {
+  position: fixed;
   inset: 0;
+  z-index: 0;
+}
+.gls-page--arc .gls-events-hero,
+.gls-page--arc .gls-trailers,
+.gls-page--arc .gls-form-section {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+/* Acento celeste -> rojo, "solo para este evento" (mismo criterio que
+   theme="left4dead" en EventsCarousel: hardcodeado aca porque hoy solo
+   hay un evento real; cuando haya un segundo con su propio color,
+   esto pasa a venir de `data` en vez de estar fijo). */
+.gls-page--accent-red .gls-cta-btn {
+  background: linear-gradient(135deg, #e0263f, #ff6b4d);
+  box-shadow: 0 0 30px rgba(224, 38, 63, .45);
+}
+.gls-page--accent-red .gls-submit { background: #e0263f }
+.gls-page--accent-red .gls-trailer-play {
+  background: linear-gradient(135deg, #e0263f, #ff6b4d);
+}
+/* El formulario usa utilidades de Tailwind (focus:border-sky-500,
+   focus:ring-sky-500/30, ver inputCls en GoLeftShowcase.jsx) — se
+   pisan aca en vez de duplicar el archivo de utilidades solo para
+   cambiar dos clases. */
+.gls-page--accent-red .gls-form-card input:focus,
+.gls-page--accent-red .gls-form-card .gls-select-btn:focus,
+.gls-page--accent-red .gls-select.is-open .gls-select-btn {
+  border-color: #e0263f !important;
+  box-shadow: 0 0 0 3px rgba(224, 38, 63, .3) !important;
+}
+.gls-page--accent-red .gls-select-option.is-selected { color: #ff6b6b }
+
+/* El panel del landing (heroMode="reveal") solo carga utilidades
+   de Tailwind, sin @tailwind base -ver gls-panel-utilities.css-, asi
+   que no hereda el reset de Preflight (quita el subrayado nativo de
+   <a>, pone border-width:0 por defecto en todo, etc). La pagina
+   standalone si carga el app.css completo, donde esto ya viene gratis
+   -de ahi que estas reglas sean redundantes pero inofensivas ahi.
+   .gls-ticket-overlay se porta a document.body (ver GoLeftShowcase.jsx
+   y la nota junto a .gls-ticket-overlay mas abajo), asi que queda
+   fuera de .gls-page en el DOM y necesita su propio selector. */
+.gls-page a,
+.gls-ticket-overlay a { text-decoration: none }
+.gls-page input,
+.gls-page select,
+.gls-page button { font: inherit; box-sizing: border-box }
+.gls-page input,
+.gls-page select { border-width: 1px; border-style: solid }
+
+/* ── Hero: banner a pantalla completa ──────────────────────────────── */
+.gls-hero {
+  position: relative;
+  min-height: 100svh;
+  min-height: 100vh;
+  background-size: cover;
+  background-position: center;
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 30px 32px;
-}
-
-.gl-back-body { min-height: 0 }
-
-.gl-name {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 30px;
-  letter-spacing: .02em;
-  margin: 0;
-}
-
-.gl-date {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin: 10px 0 0;
-  font-family: 'Space Mono', monospace;
-  font-size: 15px;
-  color: #73c6f5;
-}
-
-.gl-desc {
-  margin: 12px 0 0;
-  font-size: 15px;
-  line-height: 1.55;
-  color: rgba(255, 255, 255, .68);
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
+  align-items: flex-end;
   overflow: hidden;
 }
-.gl-desc--back { -webkit-line-clamp: 4 }
-
-.gl-back-actions {
+.gls-hero-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, .92) 0%, rgba(0, 0, 0, .35) 45%, rgba(0, 0, 0, .55) 100%);
+}
+.gls-hero-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 24px 64px;
+  text-align: center;
+}
+.gls-hero-eyebrow {
+  margin: 0 0 10px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  color: #73c6f5;
+}
+.gls-hero-title {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 800;
+  font-size: clamp(32px, 7vw, 64px);
+  letter-spacing: .02em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+.gls-hero-date {
+  margin: 14px 0 0;
   display: flex;
-  gap: 12px;
-  margin-top: 18px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Space Mono', monospace;
+  font-size: 15px;
+  color: rgba(255, 255, 255, .7);
 }
 
-.gl-back-cta {
-  flex: 1;
-  height: 48px;
+/* Variante para heroMode="reveal": el banner principal ya no es una
+   imagen sola -es el slide "actual" de <EventsCarousel variant="hero">
+   (EventsCarousel.jsx/.css), junto con las tarjetas "Proximamente"-.
+   Esto es solo el fondo/padding alrededor del carrusel + CTA. */
+.gls-events-hero {
+  padding: 48px 24px 64px;
+  background: #06080f;
+}
+.gls-events-hero .gls-hero-content { padding: 0; margin: 32px auto 0 }
+
+/* ── Tráilers, uno por evento real (ver TrailerButton en
+   GoLeftShowcase.jsx) — debajo de la seccion de eventos. */
+.gls-trailers {
+  padding: 0 24px 56px;
+  background: #06080f;
+}
+.gls-trailers-label {
+  margin: 0 0 16px;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .4);
+}
+.gls-trailers-list {
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gls-trailer-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .03);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+.gls-trailer-btn:hover { background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .2) }
+.gls-trailer-play {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #73c6f5, #3ddcff);
+  color: #04101f;
+  font-size: 12px;
+}
+
+.gls-trailer-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 6, 14, .94);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.gls-trailer-video {
+  width: 100%;
+  max-width: 1180px;
+  max-height: 88vh;
+  border-radius: 16px;
+  background: #000;
+  box-shadow: 0 0 60px rgba(0, 0, 0, .6);
+}
+.gls-trailer-close {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1410;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(8, 10, 18, .72);
+  color: #fff;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+.gls-trailer-close:hover { background: rgba(224, 38, 63, .85); transform: scale(1.06) }
+
+/* ── CTA: pregunta + boton con sacudida periodica de atencion ──────── */
+.gls-cta {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.gls-cta-question {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(16px, 2.6vw, 22px);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: #fff;
+}
+.gls-cta-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 18px 48px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 16px;
+  /* !important: mismo motivo que .gls-submit mas abajo -".gls-page
+     button { font: inherit }" pisaba el peso por especificidad. */
+  font-weight: 700 !important;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: #04101f;
+  background: linear-gradient(135deg, #73c6f5, #3ddcff);
+  box-shadow: 0 0 30px rgba(115, 198, 245, .45);
+  cursor: pointer;
+  transition: filter .2s ease;
+  animation: glsCtaWiggle 4s ease-in-out infinite;
+}
+.gls-cta-btn:hover { filter: brightness(1.08) }
+@keyframes glsCtaWiggle {
+  0%, 82%, 100% { transform: scale(1) rotate(0) }
+  85% { transform: scale(1.05) rotate(-2.5deg) }
+  88% { transform: scale(1.05) rotate(2.5deg) }
+  91% { transform: scale(1.03) rotate(-1.5deg) }
+  94% { transform: scale(1.03) rotate(1.5deg) }
+  97% { transform: scale(1.04) rotate(0) }
+}
+
+/* ── Seccion del formulario, aparece debajo del hero al pulsar el CTA */
+.gls-form-section {
+  padding: 56px 20px;
+  display: flex;
+  justify-content: center;
+  background: #06080f;
+  animation: glsFadeUp .5s cubic-bezier(.22, 1, .36, 1);
+}
+@keyframes glsFadeUp {
+  from { opacity: 0; transform: translateY(16px) }
+  to { opacity: 1; transform: translateY(0) }
+}
+.gls-form-card {
+  width: 100%;
+  max-width: 520px;
+  background: rgba(0, 0, 0, .55);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 20px;
+  padding: 28px 26px;
+}
+.gls-form-title {
+  margin: 0 0 20px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 17px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .55);
+}
+/* Mismo lenguaje visual que el formulario de contacto del landing
+   ("Hablemos de tu proyecto", #contacto — .form-group ahi mismo):
+   reusa directamente sus variables (`--pg-*`), definidas en :root, asi
+   que heredan tal cual -mismo alto/radio/borde/tipografia, y siguen
+   sus mismos breakpoints sin repetirlos aca. Reemplaza el fondo
+   traslucido+difuminado/rounded-xl de Tailwind (mas pesado) por el
+   borde fino y fondo transparente del landing. */
+.gls-form-card label {
+  font-family: var(--font-general), system-ui, sans-serif !important;
+  font-size: var(--pg-micro, 13px) !important;
+  font-weight: 400 !important;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--pg-dim, rgba(255, 255, 255, .62)) !important;
+}
+.gls-form-card input,
+.gls-form-card .gls-select-btn {
+  height: var(--pg-btnh, 56px);
+  padding: 0 16px !important;
+  background: transparent !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  border: var(--pg-hair, 1px) solid var(--pg-edge, rgba(255, 255, 255, .16)) !important;
+  border-radius: var(--pg-radius, 8px) !important;
+  color: #fff !important;
+  font-family: var(--font-general), system-ui, sans-serif !important;
+  font-size: var(--pg-small, 15px) !important;
+  transition: border-color .25s ease;
+}
+.gls-form-card input::placeholder { color: var(--pg-dim2, rgba(255, 255, 255, .38)) }
+.gls-form-card input:focus,
+.gls-form-card .gls-select-btn:focus {
+  border-color: rgba(255, 255, 255, .55) !important;
+}
+
+/* "Rol" (RoleSelect en GoLeftShowcase.jsx): el <select> nativo se
+   reemplazo por un boton + lista propios -el popup de un <select> lo
+   pinta el sistema operativo, no el navegador, asi que por mas CSS que
+   se le pusiera a <option> siempre se veia "por defecto"-. El boton
+   reusa inputCls (mismo fondo/borde/foco que los demas campos); esto
+   es solo el layout que inputCls no cubre. */
+.gls-select { position: relative }
+.gls-select-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  text-align: left;
+}
+.gls-select-btn i { font-size: 11px; color: rgba(255, 255, 255, .45); transition: transform .2s ease }
+.gls-select.is-open .gls-select-btn i { transform: rotate(180deg) }
+.gls-select-placeholder { color: var(--pg-dim2, rgba(255, 255, 255, .38)) }
+/* Lista desplegable: el mismo vidrio traslucido+difuminado que
+   .gls-form-card (ver arriba) en vez del azul-marino plano de
+   Tailwind que traia por defecto -desentonaba con el resto del
+   formulario, ya migrado al lenguaje visual del landing (--pg-*). */
+.gls-select-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: rgba(8, 9, 14, .92);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: var(--pg-hair, 1px) solid var(--pg-edge, rgba(255, 255, 255, .16));
+  border-radius: var(--pg-radius, 8px);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, .5);
+}
+.gls-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: calc(var(--pg-radius, 8px) - 2px);
+  background: transparent;
+  color: rgba(255, 255, 255, .78);
+  font-family: var(--font-general), system-ui, sans-serif;
+  font-size: var(--pg-small, 15px);
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+}
+.gls-select-option:hover,
+.gls-select-option:focus-visible { background: rgba(115, 198, 245, .12); color: #fff }
+.gls-select-option.is-selected { color: #73c6f5; font-weight: 600 }
+.gls-select-check { font-size: 12px; color: #73c6f5 }
+.gls-page--accent-red .gls-select-option:hover,
+.gls-page--accent-red .gls-select-option:focus-visible { background: rgba(224, 38, 63, .14) }
+.gls-page--accent-red .gls-select-check { color: #ff6b6b }
+
+.gls-submit {
+  width: 100%;
+  height: 50px;
   border: 0;
   border-radius: 9px;
   background: #73c6f5;
   color: #04101f;
   font-family: inherit;
-  font-size: 14.5px;
-  font-weight: 700;
+  font-size: 15px;
+  /* !important: ".gls-page button { font: inherit }" (mas arriba) tiene
+     mas especificidad (clase+tipo) que ".gls-submit" sola (solo clase)
+     y ganaba pisando el peso a 400 pese al orden en el archivo. */
+  font-weight: 800 !important;
   text-transform: uppercase;
   letter-spacing: .04em;
   cursor: pointer;
-  transition: filter .2s ease;
+  transition: filter .2s ease, opacity .2s ease;
+  /* Misma "animacion de inquieto" que .gls-cta-btn (glsCtaWiggle, mas
+     abajo) — llama la atencion igual para el paso final del registro. */
+  animation: glsCtaWiggle 4s ease-in-out infinite;
 }
-.gl-back-cta:hover { filter: brightness(1.1) }
+.gls-submit:hover { filter: brightness(1.1) }
+.gls-submit:disabled { opacity: .6; cursor: default; animation: none }
 
-.gl-back-link {
-  flex: 1;
-  height: 48px;
-  border-radius: 9px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, .22);
-  color: #fff;
-  font-family: inherit;
-  font-size: 13.5px;
-  letter-spacing: .02em;
+/* ── Ticket flotante superpuesto, al registrarse ───────────────────── */
+/* Se porta a document.body (GoLeftShowcase.jsx) en vez de quedar donde
+   React lo monta: dentro del panel del landing, `.events-panel` tiene
+   un `transform` (el deslizado) que lo convierte en el containing
+   block de cualquier `position:fixed` descendiente -dejaria de fijarse
+   contra el viewport y se centraria dentro de la caja larguisima del
+   panel en vez de la pantalla-. Por eso tambien el z-index queda por
+   encima de `.events-panel__close` (1200): "por encima de todo". */
+.gls-ticket-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1250;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: border-color .2s ease, color .2s ease;
+  padding: 24px;
 }
-.gl-back-link:hover { border-color: #73c6f5; color: #73c6f5 }
-.gl-back-link.is-copied { border-color: #3ddc84; color: #3ddc84 }
-
-@media (max-width: 480px) {
-  .gl-back { padding: 22px 22px }
-  .gl-name { font-size: 24px }
-  .gl-back-actions { flex-direction: column; gap: 10px }
+.gls-ticket-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 6, 14, .88);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
-
-/* ── Entrada del boleto al pulsar "Registrarse" ────────────────────
-   Ancho fijo -720px, el mismo que el prop `width` del TearTicket-, no
-   100%: en una fila, un item sin ancho propio se encoge a su contenido
-   minimo, y el `width: min(var(--tt-w), 100%)` del ticket termina
-   resolviendo contra ESE ancho encogido en vez del real (mismo problema
-   circular que .gl-ticket-wrap ya resolvia para la columna, aqui
-   aplicado a la fila). Entra desde la derecha girando, como la moneda
-   de Eventos -mismo lenguaje visual de la pagina, y no una casualidad:
-   un rotateY (giro 3D, eje Y) en vez de un rotate 2D es ademas la razon
-   real por la que sobraba tanto scroll vertical debajo. Un rotate()
-   plano gira en su propio plano: a mitad de vuelta la caja que ocupa es
-   su DIAGONAL (bastante mas grande que el rectangulo en reposo), y el
-   navegador reserva ese maximo para el overflow scrolleable de
-   .ev-panel aun cuando la animacion ya termino. rotateY no infla esa
-   caja -solo comprime el ancho por perspectiva-, así que no deja ese
-   sobrante. */
-.gl-ticket-enter {
-  width: 720px;
-  perspective: 1200px;
-  animation: glTicketEnter .7s cubic-bezier(.22, 1, .36, 1);
-}
-@keyframes glTicketEnter {
-  from { opacity: 0; transform: translateX(120px) rotateY(-360deg) scale(.85) }
-  to   { opacity: 1; transform: translateX(0) rotateY(0deg) scale(1) }
-}
-
-/* ── Panel del formulario, al arrancar el boleto ───────────────────
-   A la derecha del ticket, no debajo -mismo ancho fijo, misma razon-.
-   Nace colapsado y se abre con una animacion propia -CSS a secas, sin
-   motion, para no acoplar mas de la cuenta al resto del render-. */
-.gl-reveal {
-  width: 560px;
-  animation: glRevealIn .45s cubic-bezier(.22, 1, .36, 1);
-}
-@keyframes glRevealIn {
-  from { opacity: 0; transform: translateX(24px) }
-  to { opacity: 1; transform: translateX(0) }
-}
-
-.gl-form-title {
-  margin: 0 0 18px;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 15px;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, .55);
-}
-
-.gl-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px }
-.gl-form .form-group { margin-bottom: 16px }
-.gl-form .form-group label { font-size: 13px; margin-bottom: 7px }
-.gl-form .form-group input,
-.gl-form .form-group select {
-  height: 50px; padding: 0 14px; font-size: 15px;
-  background: rgba(255, 255, 255, .04);
-}
-
-.gl-submit {
-  width: 100%; height: 50px; border: 0; border-radius: 9px;
-  background: #73c6f5; color: #04101f;
-  font-family: inherit; font-size: 15px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .04em;
-  cursor: pointer; transition: filter .2s ease;
-}
-.gl-submit:hover { filter: brightness(1.1) }
-
-.gl-pending { font-size: 15px; color: rgba(255, 255, 255, .55); margin: 0 0 14px }
-
-.gl-stub {
-  height: 100%;
+/* Contenedor de la pila (ticket + comprobante, uno debajo del otro).
+   El ancho/max-width vive aca -no en .gls-ticket-float- porque
+   TearTicket usa `width:min(var(--tt-w),100%)`, que necesita un
+   ancestro con ancho definido o se colapsa a 0 (contra un padre sin
+   ancho propio dentro del flex de .gls-ticket-overlay). */
+.gls-ticket-stack {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 0 18px;
-  text-align: center;
+  width: 100%;
+  max-width: 720px;
 }
-.gl-stub-live {
-  flex-shrink: 0;
-  background: #e0263f;
-  color: #fff;
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: .04em;
-  padding: 6px 12px;
-  border-radius: 5px;
+.gls-ticket-float {
+  width: 100%;
+  animation: glsFloat 4s ease-in-out infinite, glsFloatIn .6s cubic-bezier(.22, 1, .36, 1);
 }
-.gl-stub-cta {
-  margin: 0;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 18px;
-  line-height: 1.35;
-  letter-spacing: .03em;
-  text-transform: uppercase;
+.gls-ticket-float.is-falling {
+  animation: glsTicketFall .8s cubic-bezier(.55, 0, .85, .35) forwards;
+}
+@keyframes glsFloat {
+  0%, 100% { transform: translateY(0) }
+  50% { transform: translateY(-12px) }
+}
+@keyframes glsFloatIn {
+  from { opacity: 0; transform: translateY(24px); filter: blur(8px) }
+  to { opacity: 1; transform: translateY(0); filter: blur(0) }
+}
+/* El ticket ya no hace falta una vez que aparece el comprobante: cae
+   de la pantalla con gravedad -no vuelve a mostrarse, GoLeftShowcase.jsx
+   lo desmonta al terminar esta animacion (ticketGone)-. */
+@keyframes glsTicketFall {
+  from { transform: translateY(0) rotate(0deg); opacity: 1 }
+  to { transform: translateY(130vh) rotate(28deg); opacity: 0 }
 }
 
-/* Manchas de sangre decorativas (tema Left 4 Dead), sobre el negro del
-   talon. Cada radial-gradient usa dos paradas casi iguales para dar un
-   borde definido -mancha, no destello difuso- y se posicionan como una
-   salpicadura real: mas densas hacia una esquina, dispersandose. Solo
-   en el talon: con artSpan=1 la foto cubre casi todo el cuerpo, asi que
-   ahi cualquier mancha quedaria tapada; el talon es la unica superficie
-   negra realmente visible.
-   OJO con las coordenadas: .tear-ticket__paper--stub no es del ancho
-   del talon -es position:absolute;inset:0 sobre el boleto ENTERO
-   (720px), recortado luego por clip-path a la tira del talon (el 30%
-   derecho, x:~71%-100%). Los porcentajes de este gradiente se miden
-   contra esos 720px, no contra el talon visible, asi que todo tiene que
-   caer dentro de ese 71%-100% para no perderse en la parte recortada. */
-.gl-ticket-enter .tear-ticket__paper--stub {
-  /* Radios en px, no en % -en un radial-gradient sin tamano explicito
-     el % se mide contra la distancia a la esquina MAS LEJANA del punto,
-     que varia segun donde caiga cada mancha; con px el tamano es el
-     mismo sin importar la posicion. */
+/* Manchas de sangre decorativas del talon (tema Left 4 Dead) — mismo
+   truco que antes: radios en px (no %, que se mide contra la esquina
+   mas lejana y no da un tamano consistente), posicionadas dentro del
+   30% derecho del boleto -el unico tramo que el clip-path del talon
+   deja visible-. */
+.gls-ticket-float .tear-ticket__paper--stub {
   background-image:
     radial-gradient(circle at 78% 10%, #c81f2b 0px, #c81f2b 11px, transparent 15px),
     radial-gradient(circle at 90% 6%,  #6b0f0f 0px, #6b0f0f 4px, transparent 6px),
@@ -279,6 +516,166 @@
   background-repeat: no-repeat;
 }
 
+.gl-stub {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+}
+.gl-stub-live {
+  display: block;
+  width: 100%;
+  background: #e0263f;
+  color: #fff;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.3;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 10px 8px;
+  border-radius: 6px;
+}
+
+/* ── Comprobante, tras desglosar ───────────────────────────────────── */
+.gls-receipt {
+  margin-top: 22px;
+  width: min(360px, 100%);
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 18px;
+  padding: 24px;
+  text-align: center;
+  animation: glsFadeUp .4s cubic-bezier(.22, 1, .36, 1);
+}
+.gls-receipt-title {
+  margin: 0 0 16px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  letter-spacing: .03em;
+  color: #3ddc84;
+}
+.gls-receipt-qr {
+  display: flex;
+  justify-content: center;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px;
+  width: fit-content;
+  margin: 0 auto;
+}
+.gls-receipt-qr svg { display: block }
+.gls-receipt-code {
+  margin: 14px 0 0;
+  font-family: 'Space Mono', monospace;
+  font-size: 14px;
+  letter-spacing: .06em;
+  color: rgba(255, 255, 255, .7);
+}
+.gls-receipt-actions {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.gls-receipt-back {
+  margin-top: 2px;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: rgba(255, 255, 255, .55);
+  cursor: pointer;
+  transition: color .2s ease;
+}
+.gls-receipt-back:hover { color: #fff }
+
+/* ── Confeti: canvas fijo a pantalla completa, decorativo ──────────── */
+/* Tambien portado a document.body (mismo motivo que .gls-ticket-overlay
+   arriba); por encima del ticket para que el estallido se vea sobre el
+   papel al desglosar. */
+.gls-confetti {
+  position: fixed;
+  inset: 0;
+  z-index: 1260;
+  pointer-events: none;
+}
+
+@media (max-width: 560px) {
+  .gls-hero-content { padding: 32px 18px 48px }
+  .gls-cta-btn { padding: 16px 36px; font-size: 14px }
+  .gls-form-card { padding: 22px 18px }
+  .gls-ticket-overlay { padding: 16px }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .gl-ticket-enter, .gl-reveal { animation: none }
+  .gls-cta-btn, .gls-submit { animation: none }
+  .gls-ticket-float { animation: none }
+  .gls-form-section, .gls-receipt { animation: none }
+}
+
+/* ── Panel deslizante de Eventos (landing) ──────────────────────────
+   Mientras esta abierto, todo lo que hoy cuelga directo del <body>
+   -nav del sitio incluida dentro de .main-container (welcome.blade.
+   php:2352), footer, redes sociales fijas y la propia moneda- se
+   oculta por completo: el panel pasa a ser el unico contenido del
+   documento, en flujo normal (no fixed), para que `window` sea el
+   scroller real (go-left-panel-mount.jsx tiene el detalle de por que
+   no es un overlay con scroll propio). El
+   deslizado es solo un transform horizontal, asi que no interfiere
+   con ese scroll vertical. El cursor 3D (.target-cursor-wrapper) no
+   se oculta a proposito: sigue funcionando sobre el panel tambien. */
+body.events-open > .main-container,
+body.events-open > footer,
+body.events-open > .lk-social,
+body.events-open > #eventsCoin { display: none }
+
+/* Sin esto, al cerrar el panel el navegador "compensa" por scroll
+   anchoring el salto de tamaño entre `.main-container` (que vuelve a
+   ocupar miles de px justo arriba de `.events-panel` en el DOM) y el
+   panel encogiendose, y termina ignorando el scrollTo(0, savedY) de
+   go-left-panel-mount.jsx dejando al usuario mas abajo de donde
+   empezo. */
+html { overflow-anchor: none }
+
+.events-panel {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  background: transparent;
+  transform: translateX(100%);
+  transition: transform .5s cubic-bezier(.22, 1, .36, 1);
+}
+.events-panel.is-open { transform: translateX(0) }
+
+.events-panel__close {
+  position: fixed;
+  top: 20px; right: 20px;
+  z-index: 1200;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(8, 10, 18, .72);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+.events-panel__close:hover { background: rgba(224, 38, 63, .85); transform: scale(1.06) }
+
+@media (prefers-reduced-motion: reduce) {
+  .events-panel { transition: none }
 }
