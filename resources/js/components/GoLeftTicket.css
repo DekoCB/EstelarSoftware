@@ -1,76 +1,57 @@
-/* Envoltorio propio para el boleto "Go Left!!" de la landing: una
-   FlipCard (React Bits) de frente/reverso -imagen del evento, luego su
-   detalle y los botones de accion-. "Registrarse" hace entrar al
-   TearTicket con su propia animacion (entra desde la derecha girando);
-   recien al arrancarlo aparece, tambien a la derecha, el formulario real
-   del torneo.
-   Fila, no columna: apilar todo hacia abajo (version anterior) hacia
-   afuera del alto fijo de .ev-card (480px) via overflow:visible sigue
-   contando como "contenido" para el overflow escrolleable de .ev-panel
-   -hueco vacio enorme debajo del formulario, sin nada ahi-. En fila el
-   crecimiento es horizontal: se abraza con ancho fijo por pieza (nada
-   de encoger para caber) y scroll horizontal en vez de pelear por el
-   overflow vertical. */
+/* Envoltorio propio para el boleto "Go Left!!" de la landing: SOLO una
+   tarjeta visible a la vez, en secuencia -poster del evento, luego el
+   TearTicket, luego el detalle (Registrarse/Copiar enlace), luego el
+   formulario-. `step` en tear-ticket-mount.jsx decide cual de las cuatro
+   se monta; nunca hay dos al mismo tiempo, asi que centrar una sola pieza
+   basta -sin fila ni scroll horizontal que repartir-. */
 .gl-ticket-wrap {
   display: flex;
-  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 32px;
   width: 100%;
   min-width: 0;
   /* Contrarresta el skewY(3deg) que CardSwap le aplica a .ev-card (el
      "abanico" del mazo, en welcome.blade.php/initCardSwap). Esta card
      no tiene fondo ni borde propios (.ev-ticket-mount los quita), asi
      que ese sesgo no se ve en nada aqui -pero SI infla la caja delimi-
-     tadora que getBoundingClientRect reporta para todo lo de adentro,
-     proporcional al ancho del contenido (ancho*tan(3°)). Eso, no un
-     hueco real, era el "espacio vacio" que quedaba debajo al desglosar
-     el ticket: mientras mas ancho el contenido (el ticket a 720px, la
-     fila entera mas todavia), mas alto de mas media el navegador. */
+     tadora que getBoundingClientRect reporta para todo lo de adentro. */
   transform: skewY(-3deg);
 }
-/* Antes de "Registrarse" -solo la FlipCard- se ve centrada como
-   siempre; en cuanto el ticket entra, se ancla a la izquierda para que
-   todo lo nuevo crezca hacia la derecha (scrollear, no re-centrar). */
-.gl-ticket-wrap:has(.gl-ticket-enter) {
-  justify-content: flex-start;
-}
-/* flex-shrink:0 en cada pieza: sin esto flexbox las encoge para intentar
-   caber en el ancho visible, exactamente lo que no queremos ahora que
-   el ancho real se resuelve con scroll. */
-.gl-ticket-wrap > * {
+
+/* ── Poster del evento (paso 1): la imagen sola, clickeable -entra al
+   TearTicket-. Mismo tamano que llevaba la FlipCard antes de esto. ──── */
+.gl-poster {
+  width: 400px;
+  height: 533px;
+  border-radius: 18px;
+  overflow: hidden;
+  cursor: pointer;
   flex-shrink: 0;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, .45);
 }
+.gl-poster:focus-visible { outline: 2px solid #73c6f5; outline-offset: 3px }
 
-/* La FlipCard fija su tamano en px via custom properties inline
-   (--fc-w/--fc-h); en el breakpoint movil de .ev-card (300x490) se
-   sobreescriben con !important -un inline style solo cede ante eso. */
+.gl-front { width: 100%; height: 100% }
+.gl-front img { width: 100%; height: 100%; object-fit: cover; display: block }
+
 @media (max-width: 480px) {
-  .gl-ticket-wrap .flip-card {
-    --fc-w: 300px !important;
-    --fc-h: 400px !important;
-  }
+  .gl-poster { width: 300px; height: 400px }
 }
 
-/* ── Frente de la FlipCard: solo la imagen -el video ahora es un fondo
-   de pantalla aparte, ver .ev-video-bg en welcome.blade.php-. Este div
-   solo existe para detectar el hover que lo dispara. ────────────────── */
-.gl-front {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-.gl-front img { position: absolute; inset: 0 }
-
-/* ── Reverso de la FlipCard: detalle del evento + acciones ────────── */
+/* ── Detalle del evento (paso 3): nombre/fecha/descripcion + acciones.
+   Antes vivia como reverso de la FlipCard (position:absolute sobre su
+   caja); ahora es su propia tarjeta, con el mismo tamano y fondo. ────── */
 .gl-back {
-  position: absolute;
-  inset: 0;
+  width: 400px;
+  min-height: 533px;
+  background: #27272a;
+  color: #f5f5f5;
+  border-radius: 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 30px 32px;
+  flex-shrink: 0;
 }
 
 .gl-back-body { min-height: 0 }
@@ -147,27 +128,16 @@
 .gl-back-link.is-copied { border-color: #3ddc84; color: #3ddc84 }
 
 @media (max-width: 480px) {
-  .gl-back { padding: 22px 22px }
+  .gl-back { width: 300px; min-height: 400px; padding: 22px 22px }
   .gl-name { font-size: 24px }
   .gl-back-actions { flex-direction: column; gap: 10px }
 }
 
-/* ── Entrada del boleto al pulsar "Registrarse" ────────────────────
-   Ancho fijo -720px, el mismo que el prop `width` del TearTicket-, no
-   100%: en una fila, un item sin ancho propio se encoge a su contenido
-   minimo, y el `width: min(var(--tt-w), 100%)` del ticket termina
-   resolviendo contra ESE ancho encogido en vez del real (mismo problema
-   circular que .gl-ticket-wrap ya resolvia para la columna, aqui
-   aplicado a la fila). Entra desde la derecha girando, como la moneda
-   de Eventos -mismo lenguaje visual de la pagina, y no una casualidad:
-   un rotateY (giro 3D, eje Y) en vez de un rotate 2D es ademas la razon
-   real por la que sobraba tanto scroll vertical debajo. Un rotate()
-   plano gira en su propio plano: a mitad de vuelta la caja que ocupa es
-   su DIAGONAL (bastante mas grande que el rectangulo en reposo), y el
-   navegador reserva ese maximo para el overflow scrolleable de
-   .ev-panel aun cuando la animacion ya termino. rotateY no infla esa
-   caja -solo comprime el ancho por perspectiva-, así que no deja ese
-   sobrante. */
+/* ── Entrada del boleto (paso 2), al hacer click en el poster ──────
+   Ancho fijo -720px, el mismo que el prop `width` del TearTicket-: sin
+   esto el `width: min(var(--tt-w), 100%)` del ticket resolveria contra
+   el ancho encogido de un item sin ancho propio. Gira al entrar, como
+   la moneda de Eventos -mismo lenguaje visual de la pagina-. */
 .gl-ticket-enter {
   width: 720px;
   perspective: 1200px;
@@ -178,10 +148,7 @@
   to   { opacity: 1; transform: translateX(0) rotateY(0deg) scale(1) }
 }
 
-/* ── Panel del formulario, al arrancar el boleto ───────────────────
-   A la derecha del ticket, no debajo -mismo ancho fijo, misma razon-.
-   Nace colapsado y se abre con una animacion propia -CSS a secas, sin
-   motion, para no acoplar mas de la cuenta al resto del render-. */
+/* ── Formulario de inscripcion (paso 4), al pulsar "Registrarse" ──── */
 .gl-reveal {
   width: 560px;
   animation: glRevealIn .45s cubic-bezier(.22, 1, .36, 1);

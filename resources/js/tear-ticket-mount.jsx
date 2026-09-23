@@ -2,23 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createPortal } from 'react-dom';
 import TearTicket from './components/TearTicket';
-import FlipCard from './components/FlipCard';
 import './components/GoLeftTicket.css';
 
 /**
- * Frente de la FlipCard: solo la imagen -el video ya no reemplaza nada
- * aqui adentro, ver GoLeftBgVideo-, pero el hover se detecta desde este
- * mismo lugar (`onHover` sube el estado al padre).
+ * Poster del evento: la imagen sola, clickeable. El hover se detecta desde
+ * aqui mismo (`onHover` sube el estado al padre) para disparar el video de
+ * fondo, ver GoLeftBgVideo.
  */
 function GoLeftFront({ image, alt, onHover }) {
   return (
     <div className="gl-front" onMouseEnter={() => onHover(true)} onMouseLeave={() => onHover(false)}>
-      <img
-        src={image}
-        alt={alt}
-        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-        draggable={false}
-      />
+      <img src={image} alt={alt} draggable={false} />
     </div>
   );
 }
@@ -69,14 +63,14 @@ function GoLeftBgVideo({ video, active }) {
  * Datos (nombre, fecha, descripcion, action del form, csrf) llegan por
  * data-* en el div #tearTicketRoot.
  *
- * Flujo (v3): FlipCard (React Bits) -imagen del evento de frente, deta-
- * lle + botones de atras-. "Registrarse" hace entrar al TearTicket con
- * una animacion propia (sube desde abajo girando); recien al arrancarlo
- * aparece, debajo, el formulario real de inscripcion al torneo.
+ * Flujo: una sola tarjeta visible a la vez, en secuencia -
+ * poster del evento -> click entra al TearTicket -> arrancar el boleto
+ * revela el detalle del evento (Registrarse/Copiar enlace) -> "Registrarse"
+ * revela el formulario real de inscripcion al torneo. `step` es la unica
+ * fuente de verdad de cual de las cuatro se muestra; nunca hay dos a la vez.
  */
 function GoLeftTicket({ data }) {
-  const [showTicket, setShowTicket] = useState(false);
-  const [torn, setTorn] = useState(false);
+  const [step, setStep] = useState('poster'); // 'poster' | 'ticket' | 'info' | 'form'
   const [copied, setCopied] = useState(false);
   const [frontHover, setFrontHover] = useState(false);
 
@@ -97,75 +91,30 @@ function GoLeftTicket({ data }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // El FlipCard tiene su propio gesto de click/drag en el div raiz -sin
-  // esto, tocar un boton de atras tambien voltearia la card entera,
-  // porque el pointerdown/up burbujea hasta ese handler-.
-  const stopBubble = {
-    onPointerDown: e => e.stopPropagation(),
-    onPointerUp: e => e.stopPropagation(),
-    onKeyDown: e => e.stopPropagation(),
+  const onPosterKey = e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    e.preventDefault();
+    setStep('ticket');
   };
 
   return (
     <div className="gl-ticket-wrap">
-      {!showTicket && (
-      <FlipCard
-        front={<GoLeftFront image={data.image} alt={`Evento ${data.nombre}`} onHover={setFrontHover} />}
-        back={
-          <div className="gl-back">
-            <div className="gl-back-body">
-              <h3 className="gl-name">{data.nombre}</h3>
-              <p className="gl-date">
-                <i className="fas fa-calendar" /> {data.fecha}
-              </p>
-              <p className="gl-desc gl-desc--back">{data.descripcion}</p>
-            </div>
-            <div className="gl-back-actions">
-              <button
-                type="button"
-                className="gl-back-cta"
-                onClick={() => setShowTicket(true)}
-                {...stopBubble}
-              >
-                Registrarse
-              </button>
-              <button
-                type="button"
-                className={`gl-back-link${copied ? ' is-copied' : ''}`}
-                onClick={copyLink}
-                {...stopBubble}
-              >
-                <i className="fas fa-link" /> {copied ? '¡Enlace copiado!' : 'Copiar enlace'}
-              </button>
-            </div>
-          </div>
-        }
-        axis="y"
-        flipOnClick
-        draggable
-        tilt
-        tiltMax={10}
-        glare
-        glareOpacity={0.18}
-        hoverScale={1.02}
-        perspective={1200}
-        stiffness={170}
-        damping={20}
-        width={400}
-        height={533}
-        radius={18}
-        background="#27272a"
-        color="#f5f5f5"
-        shadow
-        shadowColor="#000000"
-        shadowOpacity={0.45}
-        ariaLabel={`Voltear tarjeta del evento ${data.nombre}`}
-      />
+      {step === 'poster' && (
+        <div
+          className="gl-poster"
+          role="button"
+          tabIndex={0}
+          aria-label={`Ver boleto del evento ${data.nombre}`}
+          onClick={() => setStep('ticket')}
+          onKeyDown={onPosterKey}
+        >
+          <GoLeftFront image={data.image} alt={`Evento ${data.nombre}`} onHover={setFrontHover} />
+        </div>
       )}
 
       <GoLeftBgVideo video={data.video} active={frontHover} />
 
-      {showTicket && (
+      {step === 'ticket' && (
         <div className="gl-ticket-enter">
           <TearTicket
             image={data.ticketImage || data.image}
@@ -175,7 +124,7 @@ function GoLeftTicket({ data }) {
             scrim={false}
             imageRadius={12}
             artSpan={1}
-            onTear={() => setTorn(true)}
+            onTear={() => setStep('info')}
             width={720}
             height={400}
             stubSize={210}
@@ -209,7 +158,31 @@ function GoLeftTicket({ data }) {
         </div>
       )}
 
-      {torn && (
+      {step === 'info' && (
+        <div className="gl-back">
+          <div className="gl-back-body">
+            <h3 className="gl-name">{data.nombre}</h3>
+            <p className="gl-date">
+              <i className="fas fa-calendar" /> {data.fecha}
+            </p>
+            <p className="gl-desc gl-desc--back">{data.descripcion}</p>
+          </div>
+          <div className="gl-back-actions">
+            <button type="button" className="gl-back-cta" onClick={() => setStep('form')}>
+              Registrarse
+            </button>
+            <button
+              type="button"
+              className={`gl-back-link${copied ? ' is-copied' : ''}`}
+              onClick={copyLink}
+            >
+              <i className="fas fa-link" /> {copied ? '¡Enlace copiado!' : 'Copiar enlace'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === 'form' && (
         <div className="gl-reveal">
           {data.action ? (
             <form method="POST" action={data.action} className="gl-form">
