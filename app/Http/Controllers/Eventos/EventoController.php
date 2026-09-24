@@ -63,6 +63,7 @@ class EventoController extends Controller
                 }
             },
             'asistentes' => fn ($q) => $q->orderByDesc('created_at'),
+            'equipos'    => fn ($q) => $q->with(['integrantes', 'pagoRevisadoBy'])->orderByDesc('created_at'),
         ]);
 
         $kpis = [

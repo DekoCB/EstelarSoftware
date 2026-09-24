@@ -165,6 +165,27 @@
                 </select>
             </div>
 
+            <div class="sm:col-span-2"
+                 x-data="{ mostrar: {{ old('mostrar_al_ingresar', $evento->mostrar_al_ingresar ?? false) ? 'true' : 'false' }} }">
+                <label class="block text-xs font-medium text-slate-400 mb-1.5">Mostrar al ingresar a la web</label>
+                <input type="hidden" name="mostrar_al_ingresar" :value="mostrar ? 1 : 0">
+                <div class="inline-flex rounded-xl border border-slate-700 bg-slate-800/60 p-1 gap-1">
+                    <button type="button" @click="mostrar = true"
+                        :class="mostrar ? 'bg-sky-500 text-white' : 'text-slate-400 hover:text-white'"
+                        class="px-5 py-1.5 rounded-lg text-sm font-medium transition">Sí</button>
+                    <button type="button" @click="mostrar = false"
+                        :class="!mostrar ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white'"
+                        class="px-5 py-1.5 rounded-lg text-sm font-medium transition">No</button>
+                </div>
+                <p class="text-slate-600 text-xs mt-1">
+                    <span x-show="mostrar">Al entrar a la página principal se abrirá primero el panel del evento.</span>
+                    <span x-show="!mostrar">La página principal abre normal; el evento se ve desde la moneda "Eventos".</span>
+                </p>
+                @error('mostrar_al_ingresar')
+                    <p class="text-red-400 text-xs mt-1">{{ $message }}</p>
+                @enderror
+            </div>
+
         </div>
     </div>
 

@@ -18,12 +18,22 @@
     <div class="w-full max-w-2xl">
 
         <div class="text-center mb-5 no-print">
+            @if($asistente->team && !$asistente->team->pagado())
+            {{-- Inscripcion por equipo: no esta concretada hasta confirmar el pago --}}
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                </svg>
+                {{ $asistente->team->estadoPagoLabel() }} — la entrada se activa al confirmar el pago
+            </div>
+            @else
             <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
                 </svg>
                 Inscripción confirmada
             </div>
+            @endif
         </div>
 
         {{-- ── Ticket ──────────────────────────────────────────────── --}}

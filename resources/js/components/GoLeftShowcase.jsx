@@ -97,14 +97,18 @@ function FieldError({ errors, name }) {
  * `id` para que siga funcionando el click-para-enfocar de un label
  * normal) envuelto por dentro.
  */
-function Field({ label, name, errors, ...inputProps }) {
+// `id`/`errorKey` opcionales: en la inscripcion por equipo el `name` es
+// "miembros[0][nombres]" (asi lo arma FormData para Laravel), pero el
+// error vuelve como "miembros.0.nombres" y el id tiene que ser unico
+// por fila.
+function Field({ label, name, id = name, errorKey = name, errors, ...inputProps }) {
   return (
     <div>
-      <AsciiGlitchRipple as="label" htmlFor={name} className={labelCls}>
+      <AsciiGlitchRipple as="label" htmlFor={id} className={labelCls}>
         {label}
       </AsciiGlitchRipple>
-      <input id={name} name={name} className={inputCls} {...inputProps} />
-      <FieldError errors={errors} name={name} />
+      <input id={id} name={name} className={inputCls} {...inputProps} />
+      <FieldError errors={errors} name={errorKey} />
     </div>
   );
 }
@@ -154,6 +158,15 @@ function TrailerButton({ title, video }) {
 
 const ROLES = ['Capitán', 'Jugador', 'Suplente'];
 
+// Mismo tope que EventTeam::MAX_INTEGRANTES en el backend.
+const MAX_MIEMBROS = 4;
+
+let miembroSeq = 0;
+function nuevoMiembro() {
+  miembroSeq += 1;
+  return { key: `m${miembroSeq}`, rol: '' };
+}
+
 /**
  * El <select> nativo del "Rol" nunca se pudo terminar de vestir con el
  * tema oscuro: el `<option>` acepta background-color/color por CSS,
@@ -166,7 +179,7 @@ const ROLES = ['Capitán', 'Jugador', 'Suplente'];
  * vive en ese input tambien para que la validacion nativa del
  * navegador lo siga cubriendo.
  */
-function RoleSelect({ value, onChange, errors }) {
+function RoleSelect({ value, onChange, errors, name = 'rol', id = 'rol', errorKey = name }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
 
@@ -181,9 +194,9 @@ function RoleSelect({ value, onChange, errors }) {
 
   return (
     <div className={`gls-select${open ? ' is-open' : ''}`} ref={rootRef}>
-      <input type="hidden" name="rol" value={value} required />
+      <input type="hidden" name={name} value={value} required />
       <button
-        id="rol"
+        id={id}
         type="button"
         className={`gls-select-btn ${inputCls}`}
         onClick={() => setOpen(o => !o)}
@@ -212,7 +225,7 @@ function RoleSelect({ value, onChange, errors }) {
           ))}
         </ul>
       )}
-      <FieldError errors={errors} name="rol" />
+      <FieldError errors={errors} name={errorKey} />
     </div>
   );
 }
@@ -241,8 +254,23 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
   const [ticketFalling, setTicketFalling] = useState(false);
   const [ticketGone, setTicketGone] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [rol, setRol] = useState('');
+  // Inscripcion por equipo: 1 a MAX_MIEMBROS filas. Cada fila lleva un
+  // `key` propio (no el indice) para que al quitar una del medio React
+  // no le pase los valores tipeados a la de al lado.
+  const [miembros, setMiembros] = useState(() => [nuevoMiembro()]);
+  const [logoPreview, setLogoPreview] = useState(null);
   const formSectionRef = useRef(null);
+
+  useEffect(() => () => { if (logoPreview) URL.revokeObjectURL(logoPreview); }, [logoPreview]);
+
+  const setRolDe = (key, rol) => setMiembros(ms => ms.map(m => (m.key === key ? { ...m, rol } : m)));
+  const agregarMiembro = () => setMiembros(ms => (ms.length < MAX_MIEMBROS ? [...ms, nuevoMiembro()] : ms));
+  const quitarMiembro = key => setMiembros(ms => ms.filter(m => m.key !== key));
+
+  const onLogoChange = e => {
+    const file = e.target.files?.[0];
+    setLogoPreview(file ? URL.createObjectURL(file) : null);
+  };
 
   // El tema rojo/Left4Dead es del evento real (slide 0); en cuanto el
   // carrusel muestra una tarjeta "Proximamente" (sin evento ni color
@@ -259,24 +287,34 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
     // oculto, y `required` en un input hidden no lo valida el navegador
     // (queda fuera de la validacion nativa por spec). Se chequea a mano
     // para no depender del viaje al servidor para algo tan simple.
-    if (!rol) {
-      setErrors({ rol: ['Selecciona un rol.'] });
+    const sinRol = {};
+    miembros.forEach((m, i) => {
+      if (!m.rol) sinRol[`miembros.${i}.rol`] = ['Selecciona un rol.'];
+    });
+    if (Object.keys(sinRol).length) {
+      setErrors(sinRol);
       return;
     }
     setSubmitting(true);
     setErrors({});
-    const payload = Object.fromEntries(new FormData(e.target).entries());
+    // FormData tal cual (multipart) -no JSON- porque puede llevar el
+    // logo; Laravel arma el array `miembros` desde "miembros[0][...]".
+    const payload = new FormData(e.target);
+    if (!payload.get('logo')?.size) payload.delete('logo');
     try {
-      const res = await fetch(data.action, {
+      const res = await fetch(data.actionEquipo, {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
-          'Content-Type': 'application/json',
           Accept: 'application/json',
           'X-CSRF-TOKEN': data.csrf,
         },
-        body: JSON.stringify(payload),
+        body: payload,
       });
+      if (res.status === 429) {
+        setErrors({ _general: ['Demasiados intentos. Espera un minuto e intenta de nuevo.'] });
+        return;
+      }
       if (res.status === 422) {
         const body = await res.json();
         setErrors(body.errors || {});
@@ -297,6 +335,37 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
   // sin esperar a nada mas. El propio ticket -ya inutil una vez que
   // esta el comprobante- cae de la pantalla en ese mismo instante y no
   // vuelve a aparecer, en paralelo, no antes.
+  // Comprobante de pago: la inscripcion del equipo queda pendiente hasta
+  // que el staff lo valide (ver EventTeamPagoController).
+  const [comprobante, setComprobante] = useState({ estado: 'idle', error: null, nombre: null });
+
+  const onComprobanteChange = async e => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !ticketData?.equipo?.comprobante_url) return;
+    setComprobante({ estado: 'subiendo', error: null, nombre: file.name });
+    const payload = new FormData();
+    payload.append('comprobante', file);
+    try {
+      const res = await fetch(ticketData.equipo.comprobante_url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'X-CSRF-TOKEN': data.csrf },
+        body: payload,
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = body.errors?.comprobante?.[0] || body.message
+          || 'No pudimos subir el comprobante. Intenta nuevamente.';
+        setComprobante({ estado: 'error', error: msg, nombre: null });
+        return;
+      }
+      setComprobante({ estado: 'enviado', error: null, nombre: file.name });
+    } catch {
+      setComprobante({ estado: 'error', error: 'No pudimos subir el comprobante. Intenta nuevamente.', nombre: null });
+    }
+  };
+
   const onTear = () => {
     setConfettiOn(true);
     setStage('torn');
@@ -347,11 +416,18 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
                   fecha: data.fecha,
                   descripcion: data.descripcion,
                   bases: data.bases,
+                  // Siempre visible: la 1ra vez abre el formulario; si ya
+                  // esta abierto (en celular queda fuera de pantalla) lleva
+                  // hasta el en vez de desaparecer.
+                  onRegister: stage === 'cta'
+                    ? () => setStage('form')
+                    : stage === 'form'
+                      ? () => formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      : undefined,
                 },
                 ...SOON_SLIDES,
               ]}
             />
-            <div className="gls-hero-content">{cta}</div>
           </section>
 
           <section className="gls-trailers">
@@ -380,55 +456,111 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
       {stage === 'form' && (
         <section className="gls-form-section" ref={formSectionRef}>
           <div className="gls-form-card">
-            <p className="gls-form-title">Inscripción — {data.nombre}</p>
+            <p className="gls-form-title">Inscripción por equipo — {data.nombre}</p>
 
             <form className="space-y-4" onSubmit={onSubmit}>
-              <Field
-                label="Nombre completo"
-                name="nombres"
-                placeholder="Tu nombre completo"
-                required
-                maxLength={200}
-                errors={errors}
-              />
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Nickname" name="nickname" placeholder="Tu nickname" required maxLength={100} errors={errors} />
-                <Field label="Edad" name="edad" type="number" placeholder="Edad" required min={1} max={99} errors={errors} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field
-                  label="WhatsApp"
-                  name="telefono"
-                  type="tel"
-                  placeholder="+51 999 999 999"
-                  required
-                  maxLength={20}
-                  errors={errors}
-                />
-                <Field label="Steam ID" name="steam_id" placeholder="Tu Steam ID" required maxLength={50} errors={errors} />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Field
-                  label="Nombre del equipo"
-                  name="equipo"
-                  placeholder="Nombre del equipo"
-                  required
-                  maxLength={150}
-                  errors={errors}
-                />
-                <div>
-                  <AsciiGlitchRipple as="label" htmlFor="rol" className={labelCls}>Rol</AsciiGlitchRipple>
-                  <RoleSelect value={rol} onChange={setRol} errors={errors} />
+              {/* ── Equipo: nombre + logo opcional, lado a lado ── */}
+              <div className="gls-team-head">
+                <div className="flex-1 min-w-0">
+                  <Field
+                    label="Nombre del equipo"
+                    name="equipo"
+                    placeholder="Nombre de tu team"
+                    required
+                    maxLength={150}
+                    errors={errors}
+                  />
+                </div>
+                <div className="gls-team-logo">
+                  <span className={labelCls}>Logo <span className="gls-optional">(opcional)</span></span>
+                  <label htmlFor="logo" className="gls-logo-drop cursor-target" title="Subir logo del equipo">
+                    {logoPreview
+                      ? <img src={logoPreview} alt="Logo del equipo" />
+                      : <i className="fas fa-image" aria-hidden="true" />}
+                  </label>
+                  <input
+                    id="logo"
+                    name="logo"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={onLogoChange}
+                  />
                 </div>
               </div>
+              <FieldError errors={errors} name="logo" />
 
+              {/* ── Integrantes: 1 a MAX_MIEMBROS ── */}
+              {miembros.map((m, i) => {
+                const n = `miembros[${i}]`;
+                const k = `miembros.${i}`;
+                const id = f => `${m.key}-${f}`;
+                return (
+                  <fieldset key={m.key} className="gls-member">
+                    <legend className="gls-member-title">
+                      Integrante {i + 1}{i === 0 && ' (tú)'}
+                    </legend>
+                    {i > 0 && (
+                      <button
+                        type="button"
+                        className="gls-member-remove cursor-target"
+                        onClick={() => quitarMiembro(m.key)}
+                        aria-label={`Quitar integrante ${i + 1}`}
+                      >
+                        <i className="fas fa-times" />
+                      </button>
+                    )}
+
+                    <Field
+                      label="Nombre completo"
+                      name={`${n}[nombres]`}
+                      id={id('nombres')}
+                      errorKey={`${k}.nombres`}
+                      placeholder="Nombre completo"
+                      required
+                      maxLength={200}
+                      errors={errors}
+                    />
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="Nickname" name={`${n}[nickname]`} id={id('nickname')} errorKey={`${k}.nickname`} placeholder="Nickname" required maxLength={100} errors={errors} />
+                      <Field label="Edad" name={`${n}[edad]`} id={id('edad')} errorKey={`${k}.edad`} type="number" placeholder="Edad" required min={1} max={99} errors={errors} />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="WhatsApp" name={`${n}[telefono]`} id={id('telefono')} errorKey={`${k}.telefono`} type="tel" placeholder="+51 999 999 999" required maxLength={20} errors={errors} />
+                      <Field label="Steam ID" name={`${n}[steam_id]`} id={id('steam_id')} errorKey={`${k}.steam_id`} placeholder="Steam ID" required maxLength={50} errors={errors} />
+                    </div>
+
+                    <div>
+                      <AsciiGlitchRipple as="label" htmlFor={id('rol')} className={labelCls}>Rol</AsciiGlitchRipple>
+                      <RoleSelect
+                        value={m.rol}
+                        onChange={rol => setRolDe(m.key, rol)}
+                        errors={errors}
+                        name={`${n}[rol]`}
+                        id={id('rol')}
+                        errorKey={`${k}.rol`}
+                      />
+                    </div>
+                  </fieldset>
+                );
+              })}
+
+              {miembros.length < MAX_MIEMBROS ? (
+                <button type="button" className="gls-member-add cursor-target" onClick={agregarMiembro}>
+                  <i className="fas fa-plus" /> Agregar integrante
+                  <span className="gls-member-count">{miembros.length}/{MAX_MIEMBROS}</span>
+                </button>
+              ) : (
+                <p className="gls-member-full">Equipo completo ({MAX_MIEMBROS}/{MAX_MIEMBROS})</p>
+              )}
+
+              {errors.miembros && <p className="text-red-400 text-sm">{errors.miembros[0]}</p>}
               {errors._general && <p className="text-red-400 text-sm">{errors._general[0]}</p>}
 
               <button type="submit" disabled={submitting} className="gls-submit cursor-target">
-                {submitting ? 'Enviando…' : 'Reservar mi lugar'}
+                {submitting ? 'Enviando…' : 'Inscribir equipo'}
               </button>
             </form>
           </div>
@@ -484,9 +616,70 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
 
             {stage === 'torn' && ticketData && (
               <div className="gls-receipt">
-                <p className="gls-receipt-title">¡Listo! Ya procesamos tu solicitud</p>
+                <p className="gls-receipt-title">
+                  {ticketData.equipo ? '¡Solicitud recibida!' : '¡Listo! Ya procesamos tu solicitud'}
+                </p>
+                {ticketData.equipo && (
+                  <p className="gls-receipt-pending">
+                    <i className="fas fa-clock" /> Tu inscripción se confirma cuando validemos el pago.
+                  </p>
+                )}
                 <div className="gls-receipt-qr" dangerouslySetInnerHTML={{ __html: ticketData.qr_svg }} />
                 <p className="gls-receipt-code">{ticketData.codigo}</p>
+                {ticketData.equipo && (
+                  <div className="gls-receipt-team">
+                    <div className="gls-receipt-team-head">
+                      {ticketData.equipo.logo_url && <img src={ticketData.equipo.logo_url} alt="" />}
+                      <span>{ticketData.equipo.nombre}</span>
+                    </div>
+                    <ul>
+                      {ticketData.integrantes.map(a => (
+                        <li key={a.codigo}>
+                          <span className="gls-receipt-team-nick">{a.nickname}</span>
+                          <span className="gls-receipt-team-rol">{a.rol}</span>
+                          <a href={a.ticket_url} target="_blank" rel="noopener" className="cursor-target">
+                            {a.codigo}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {ticketData.equipo && (
+                  <div className={`gls-receipt-pay is-${comprobante.estado}`}>
+                    {comprobante.estado === 'enviado' ? (
+                      <>
+                        <p className="gls-receipt-pay-ok">
+                          <i className="fas fa-circle-check" /> Comprobante enviado — en revisión
+                        </p>
+                        <p className="gls-receipt-pay-file">{comprobante.nombre}</p>
+                        <label htmlFor="glsComprobante" className="gls-receipt-pay-change cursor-target">
+                          Cambiar archivo
+                        </label>
+                      </>
+                    ) : (
+                      <label htmlFor="glsComprobante" className="gls-receipt-pay-btn cursor-target">
+                        {comprobante.estado === 'subiendo' ? (
+                          <><i className="fas fa-spinner fa-spin" /> Subiendo…</>
+                        ) : (
+                          <><i className="fas fa-upload" /> Subir comprobante de inscripción</>
+                        )}
+                      </label>
+                    )}
+                    <input
+                      id="glsComprobante"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,application/pdf"
+                      className="hidden"
+                      disabled={comprobante.estado === 'subiendo'}
+                      onChange={onComprobanteChange}
+                    />
+                    {comprobante.estado !== 'enviado' && (
+                      <p className="gls-receipt-pay-hint">Yape, Plin o transferencia · imagen o PDF, máx. 5 MB</p>
+                    )}
+                    {comprobante.error && <p className="gls-receipt-pay-error">{comprobante.error}</p>}
+                  </div>
+                )}
                 <div className="gls-receipt-actions">
                   <a
                     href={ticketData.whatsapp_url}

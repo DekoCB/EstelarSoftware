@@ -29,6 +29,15 @@ function EventsPanel({ data }) {
     return () => document.removeEventListener('eventos:open', onOpen);
   }, [phase]);
 
+  // "Mostrar al ingresar a la web" (toggle en Editar evento): abre el
+  // panel apenas monta. Va despues del effect que registra el listener
+  // de 'eventos:open' para que el evento ya tenga quien lo escuche.
+  useEffect(() => {
+    if (data.autoOpen === '1') {
+      document.dispatchEvent(new CustomEvent('eventos:open'));
+    }
+  }, []);
+
   useEffect(() => {
     if (phase !== 'entering') return undefined;
     const raf1 = requestAnimationFrame(() => {

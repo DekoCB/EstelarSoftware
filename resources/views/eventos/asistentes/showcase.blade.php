@@ -28,6 +28,7 @@
         data-video="{{ asset('video/VideoLeft.mp4') }}"
         data-bases="{{ asset('docs/Bases-GoLeft.pdf') }}"
         data-action="{{ route('eventos.inscripcion.store', $evento) }}"
+        data-action-equipo="{{ route('eventos.inscripcion.equipo.store', $evento) }}"
         data-csrf="{{ csrf_token() }}"
     ></div>
 

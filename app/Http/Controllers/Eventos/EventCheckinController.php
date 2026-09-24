@@ -36,6 +36,15 @@ class EventCheckinController extends Controller
             ], 409);
         }
 
+        // Inscripcion por equipo: no esta concretada hasta confirmar el pago.
+        if ($asistente->team && !$asistente->team->pagado()) {
+            return response()->json([
+                'ok'        => false,
+                'mensaje'   => "El equipo {$asistente->team->nombre} tiene el pago sin confirmar ({$asistente->team->estadoPagoLabel()}).",
+                'asistente' => $asistente->only(['nombres', 'empresa', 'codigo']),
+            ], 409);
+        }
+
         if ($asistente->estado === 'asistio') {
             return response()->json([
                 'ok'         => false,

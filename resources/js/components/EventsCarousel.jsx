@@ -109,10 +109,25 @@ function EventsCarousel({ slides, variant = 'default', theme, onActiveChange }) 
                               <i className="fas fa-file-pdf" /> Descargar Bases
                             </a>
                           )}
-                          <div className="evc-back-cta">
-                            <span className="evc-back-cta-text">MIRA ABAJO PARA INSCRIBIRTE</span>
-                            <i className="fas fa-chevron-down evc-back-cta-arrow" aria-hidden="true" />
-                          </div>
+                          {slide.onRegister ? (
+                            // Boton "Registrarme" dentro del dorso, justo
+                            // debajo de "Descargar Bases". Sin onRegister
+                            // (slides sin inscripcion) queda el aviso "mira abajo".
+                            <button
+                              type="button"
+                              className="gls-cta-btn evc-back-register cursor-target"
+                              onClick={e => { e.stopPropagation(); slide.onRegister(); }}
+                              onPointerDown={e => e.stopPropagation()}
+                              onPointerUp={e => e.stopPropagation()}
+                            >
+                              Registrarme
+                            </button>
+                          ) : (
+                            <div className="evc-back-cta">
+                              <span className="evc-back-cta-text">MIRA ABAJO PARA INSCRIBIRTE</span>
+                              <i className="fas fa-chevron-down evc-back-cta-arrow" aria-hidden="true" />
+                            </div>
+                          )}
                           <p className="evc-back-hint"><i className="fas fa-rotate" /> Toca para volver</p>
                         </div>
                       }

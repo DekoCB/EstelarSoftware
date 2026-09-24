@@ -143,6 +143,13 @@
 }
 .evc-back-bases i { color: #e0263f; font-size: 13px }
 
+.evc-back .gls-cta-btn.evc-back-register {
+  align-self: flex-start;
+  margin-top: 12px;
+  padding: 12px 32px;
+  font-size: 13px;
+}
+
 .evc-back-cta {
   margin: 10px 0 0;
   display: flex;
@@ -221,6 +228,23 @@
    ~768px de alto (576 / .75). 820 deja un poco de margen. */
 .evc-root--hero .evc-frame {
   height: min(85vh, 820px);
+}
+/* Celular/tablet: con alto fijo en vh el marco quedaba mucho mas alto
+   que ancho (78% de ~390px vs 85vh) y object-fit:cover recortaba los
+   costados del poster. Aca el marco toma la misma proporcion del arte
+   (1080x1440 = 3:4), asi que la imagen entra completa. El slide se
+   ensancha un poco (86%) para que el dorso -detalles + "Registrarme"-
+   tenga alto suficiente, y aun asoman las vecinas a los costados. */
+@media (max-width: 899px) {
+  .evc-root--hero .evc-frame {
+    height: auto;
+    aspect-ratio: 3 / 4;
+  }
+}
+@media (max-width: 639px) {
+  .evc-root--hero .evc-slide { flex-basis: 86% }
+  .evc-root--hero .evc-back { padding: 7% 7% 44px; gap: 8px }
+  .evc-root--hero .evc-back-desc { -webkit-line-clamp: 3 }
 }
 .evc-root--hero .evc-caption {
   margin-top: 18px;

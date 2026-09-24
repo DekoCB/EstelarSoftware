@@ -22,6 +22,7 @@ class Event extends Model
         'fecha_fin',
         'hora_inicio',
         'estado',
+        'mostrar_al_ingresar',
         'responsable_id',
         'created_by',
     ];
@@ -31,6 +32,7 @@ class Event extends Model
         'fecha_fin'    => 'date',
         'latitud'      => 'decimal:7',
         'longitud'     => 'decimal:7',
+        'mostrar_al_ingresar' => 'boolean',
     ];
 
     const ESTADOS = ['planificado', 'en_curso', 'finalizado', 'cancelado'];
@@ -39,6 +41,7 @@ class Event extends Model
     public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
     public function leads(): HasMany { return $this->hasMany(EventLead::class); }
     public function asistentes(): HasMany { return $this->hasMany(EventAttendee::class); }
+    public function equipos(): HasMany { return $this->hasMany(EventTeam::class); }
 
     public function tieneUbicacion(): bool
     {

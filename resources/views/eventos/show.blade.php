@@ -252,6 +252,107 @@
             </table>
         </div>
 
+        {{-- ── Equipos inscritos + pago de la inscripción ───────────── --}}
+        @if($evento->equipos->isNotEmpty())
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-white">
+                Equipos
+                <span class="text-slate-500 font-normal">
+                    ({{ $evento->equipos->where('estado_pago', 'pagado')->count() }}/{{ $evento->equipos->count() }} pagados)
+                </span>
+            </h3>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800/60 rounded-2xl overflow-hidden mb-5">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-slate-800/80">
+                        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Equipo</th>
+                        <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Integrantes</th>
+                        <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Pago</th>
+                        <th class="px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                    @foreach($evento->equipos as $equipo)
+                    <tr class="hover:bg-slate-800/30 transition-colors">
+                        <td class="px-5 py-3.5">
+                            <div class="flex items-center gap-3">
+                                @if($equipo->logoUrl())
+                                    <img src="{{ $equipo->logoUrl() }}" alt="" class="w-8 h-8 rounded-lg object-cover flex-shrink-0">
+                                @else
+                                    <div class="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-slate-500 text-xs font-bold flex-shrink-0">
+                                        {{ mb_strtoupper(mb_substr($equipo->nombre, 0, 1)) }}
+                                    </div>
+                                @endif
+                                <div>
+                                    <p class="text-xs font-semibold text-white">{{ $equipo->nombre }}</p>
+                                    <p class="text-[10px] text-slate-500 mt-0.5">{{ $equipo->created_at->format('d/m/Y H:i') }}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3.5 hidden md:table-cell">
+                            @foreach($equipo->integrantes as $integrante)
+                            <p class="text-xs text-slate-400">
+                                {{ $integrante->nickname ?: $integrante->nombres }}
+                                <span class="text-slate-600">· {{ $integrante->rol }} · {{ $integrante->telefono }}</span>
+                            </p>
+                            @endforeach
+                        </td>
+                        <td class="px-4 py-3.5 text-center">
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-semibold {{ $equipo->estadoPagoBadgeClass() }}">
+                                {{ $equipo->estadoPagoLabel() }}
+                            </span>
+                            @if($equipo->pago_revisado_at)
+                            <p class="text-[10px] text-slate-600 mt-1">
+                                {{ $equipo->pagoRevisadoBy?->name }} · {{ $equipo->pago_revisado_at->format('d/m H:i') }}
+                            </p>
+                            @endif
+                        </td>
+                        <td class="px-4 py-3.5">
+                            <div class="flex items-center justify-end gap-1.5">
+                                @if($equipo->comprobante_pago)
+                                <a href="{{ route('eventos.equipos.comprobante', [$evento, $equipo]) }}" target="_blank"
+                                   class="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-sky-400 bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/20 transition-colors">
+                                    Ver comprobante
+                                </a>
+                                @else
+                                <span class="text-[11px] text-slate-600">Sin comprobante</span>
+                                @endif
+
+                                @can('eventos.editar')
+                                @if(!$equipo->pagado())
+                                <form method="POST" action="{{ route('eventos.equipos.pago', [$evento, $equipo]) }}">
+                                    @csrf @method('PATCH')
+                                    <input type="hidden" name="estado_pago" value="pagado">
+                                    <button type="submit"
+                                            class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">
+                                        Confirmar pago
+                                    </button>
+                                </form>
+                                @endif
+                                @if($equipo->estado_pago !== 'rechazado')
+                                <form method="POST" action="{{ route('eventos.equipos.pago', [$evento, $equipo]) }}"
+                                      x-data
+                                      @submit.prevent="if(confirm('¿Rechazar el pago del equipo {{ addslashes($equipo->nombre) }}?')) $el.submit()">
+                                    @csrf @method('PATCH')
+                                    <input type="hidden" name="estado_pago" value="rechazado">
+                                    <button type="submit"
+                                            class="px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors">
+                                        Rechazar
+                                    </button>
+                                </form>
+                                @endif
+                                @endcan
+                            </div>
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @endif
+
         {{-- ── Leads del evento ─────────────────────────────────────── --}}
         <div class="flex items-center justify-between mb-4">
             <div class="flex items-center gap-2.5">

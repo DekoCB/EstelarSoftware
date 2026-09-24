@@ -28,6 +28,7 @@ class UpdateEventRequest extends FormRequest
             'fecha_fin'       => ['nullable', 'date', 'after_or_equal:fecha_inicio'],
             'hora_inicio'     => ['nullable', 'date_format:H:i'],
             'estado'          => ['required', Rule::in(Event::ESTADOS)],
+            'mostrar_al_ingresar' => ['nullable', 'boolean'],
             'responsable_id'  => ['nullable', 'exists:users,id'],
         ];
     }

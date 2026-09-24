@@ -2897,7 +2897,9 @@
         data-video="{{ asset('video/VideoLeft.mp4') }}"
         data-bases="{{ asset('docs/Bases-GoLeft.pdf') }}"
         data-action="{{ route('eventos.inscripcion.store', $goLeftEvent) }}"
+        data-action-equipo="{{ route('eventos.inscripcion.equipo.store', $goLeftEvent) }}"
         data-csrf="{{ csrf_token() }}"
+        data-auto-open="{{ $goLeftEvent->mostrar_al_ingresar ? '1' : '0' }}"
     ></div>
     @endif
     <script>

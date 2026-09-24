@@ -9,6 +9,7 @@ class EventAttendee extends Model
 {
     protected $fillable = [
         'event_id',
+        'event_team_id',
         'codigo',
         'qr_token',
         'nombres',
@@ -38,6 +39,7 @@ class EventAttendee extends Model
     const TIPOS_DOCUMENTO = ['DNI', 'RUC', 'CE', 'PASAPORTE'];
 
     public function event(): BelongsTo { return $this->belongsTo(Event::class); }
+    public function team(): BelongsTo { return $this->belongsTo(EventTeam::class, 'event_team_id'); }
     public function checkedInBy(): BelongsTo { return $this->belongsTo(User::class, 'checked_in_by'); }
     public function createdBy(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
 

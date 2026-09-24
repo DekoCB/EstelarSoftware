@@ -18,6 +18,7 @@ use App\Http\Controllers\Eventos\EventAttendeeImportController;
 use App\Http\Controllers\Eventos\EventCheckinController;
 use App\Http\Controllers\Eventos\EventoController;
 use App\Http\Controllers\Eventos\EventLeadController;
+use App\Http\Controllers\Eventos\EventTeamPagoController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Proyectos\DailyReportController;
 use App\Http\Controllers\Proyectos\ProyectoController;
@@ -413,6 +414,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('permission:eventos.checkin')
         ->name('eventos.checkin.scan');
 
+    // ── Pago de la inscripcion por equipo (revision del staff) ───────
+    Route::get('/eventos/{evento}/equipos/{equipo}/comprobante', [EventTeamPagoController::class, 'verComprobante'])
+        ->middleware('permission:eventos.ver')
+        ->name('eventos.equipos.comprobante');
+
+    Route::patch('/eventos/{evento}/equipos/{equipo}/pago', [EventTeamPagoController::class, 'update'])
+        ->middleware('permission:eventos.editar')
+        ->name('eventos.equipos.pago');
+
 });
 
 // ── Inscripción pública a eventos (sin login) ────────────────────────
@@ -424,6 +434,14 @@ Route::get('/eventos/{evento}/inscripcion', [EventAttendeeController::class, 'cr
 
 Route::post('/eventos/{evento}/inscripcion', [EventAttendeeController::class, 'store'])
     ->name('eventos.inscripcion.store');
+
+Route::middleware(['throttle:10,1'])
+    ->post('/eventos/{evento}/inscripcion-equipo', [EventAttendeeController::class, 'storeEquipo'])
+    ->name('eventos.inscripcion.equipo.store');
+
+Route::middleware(['throttle:10,1'])
+    ->post('/eventos/{evento}/equipos/{equipo:token}/comprobante', [EventTeamPagoController::class, 'storeComprobante'])
+    ->name('eventos.inscripcion.equipo.comprobante');
 
 Route::get('/eventos/{evento}/inscripcion/{asistente:qr_token}', [EventAttendeeController::class, 'ticket'])
     ->name('eventos.inscripcion.ticket');
