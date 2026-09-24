@@ -26,7 +26,7 @@
         data-banner="{{ asset('img/Banner28.png') }}"
         data-ticket-image="{{ asset('img/Go Left Estelar.jpeg') }}"
         data-video="{{ asset('video/VideoLeft.mp4') }}"
-        data-bases="{{ asset('docs/Bases-GoLeft.pdf') }}"
+        data-bases="{{ asset('docs/Estelar_Game_Day_Bases_L4D2.pdf') }}"
         data-action="{{ route('eventos.inscripcion.store', $evento) }}"
         data-action-equipo="{{ route('eventos.inscripcion.equipo.store', $evento) }}"
         data-csrf="{{ csrf_token() }}"

@@ -2896,7 +2896,7 @@
         data-ticket-image="{{ asset('img/Go Left Estelar.jpeg') }}"
         data-video="{{ asset('video/VideoLeft.mp4') }}"
         data-audio="{{ asset('audio/Left 4 Dead 2 Soundtrack - Hard Rain Menu Theme.mp3') }}"
-        data-bases="{{ asset('docs/Bases-GoLeft.pdf') }}"
+        data-bases="{{ asset('docs/Estelar_Game_Day_Bases_L4D2.pdf') }}"
         data-action="{{ route('eventos.inscripcion.store', $goLeftEvent) }}"
         data-action-equipo="{{ route('eventos.inscripcion.equipo.store', $goLeftEvent) }}"
         data-csrf="{{ csrf_token() }}"
