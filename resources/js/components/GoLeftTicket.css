@@ -676,6 +676,28 @@ html { overflow-anchor: none }
 }
 .events-panel__close:hover { background: rgba(224, 38, 63, .85); transform: scale(1.06) }
 
+/* Silenciar musica de fondo -solo aparece mientras el carrusel muestra
+   el evento real (isGoLeftTheme), junto al boton de cerrar del panel-. */
+.gls-music-toggle {
+  position: fixed;
+  top: 76px; right: 20px;
+  z-index: 1200;
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(224, 38, 63, .3);
+  background: rgba(8, 10, 18, .72);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+.gls-music-toggle:hover { background: rgba(224, 38, 63, .85); transform: scale(1.06) }
+
 @media (prefers-reduced-motion: reduce) {
   .events-panel { transition: none }
 }

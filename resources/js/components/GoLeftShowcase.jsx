@@ -120,23 +120,35 @@ function Field({ label, name, id = name, errorKey = name, errors, ...inputProps 
  * arrancar con audio (a diferencia de un autoplay de pagina, que si lo
  * bloquea).
  */
-function TrailerButton({ title, video }) {
+function TrailerButton({ title, video, onOpenChange }) {
   const [open, setOpen] = useState(false);
   if (!video) return null;
 
+  const close = () => {
+    setOpen(false);
+    onOpenChange?.(false);
+  };
+
   return (
     <>
-      <button type="button" className="gls-trailer-btn cursor-target" onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className="gls-trailer-btn cursor-target"
+        onClick={() => {
+          setOpen(true);
+          onOpenChange?.(true);
+        }}
+      >
         <span className="gls-trailer-play"><i className="fas fa-play" /></span>
         <span>Ver el tráiler — {title}</span>
       </button>
 
       {open && createPortal(
-        <div className="gls-trailer-overlay" onClick={() => setOpen(false)}>
+        <div className="gls-trailer-overlay" onClick={close}>
           <button
             type="button"
             className="gls-trailer-close cursor-target"
-            onClick={() => setOpen(false)}
+            onClick={close}
             aria-label="Cerrar tráiler"
           >
             <i className="fas fa-times" />
@@ -260,6 +272,9 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
   const [miembros, setMiembros] = useState(() => [nuevoMiembro()]);
   const [logoPreview, setLogoPreview] = useState(null);
   const formSectionRef = useRef(null);
+  const audioRef = useRef(null);
+  const [musicMuted, setMusicMuted] = useState(false);
+  const [trailerOpen, setTrailerOpen] = useState(false);
 
   useEffect(() => () => { if (logoPreview) URL.revokeObjectURL(logoPreview); }, [logoPreview]);
 
@@ -276,6 +291,22 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
   // carrusel muestra una tarjeta "Proximamente" (sin evento ni color
   // propio todavia), todo vuelve al celeste/blanco de siempre.
   const isGoLeftTheme = heroMode === 'reveal' && activeSlide === 0;
+
+  // Musica de fondo tipo "menu del juego" -solo mientras se ve el evento
+  // real del torneo (isGoLeftTheme), nunca en las tarjetas "Proximamente"
+  // ni en la pagina standalone-. Se pausa mientras el trailer esta abierto
+  // para no pisar su propio audio. El click en la moneda que abre el panel
+  // ya cuenta como gesto del usuario, asi que el navegador deja arrancar
+  // con sonido -mismo motivo que el trailer, ver TrailerButton-.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isGoLeftTheme && !trailerOpen && !musicMuted) {
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  }, [isGoLeftTheme, trailerOpen, musicMuted]);
 
   useEffect(() => {
     if (stage === 'form') formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -433,7 +464,7 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
           <section className="gls-trailers">
             <p className="gls-trailers-label">Tráilers</p>
             <div className="gls-trailers-list">
-              <TrailerButton title={data.nombre} video={data.video} />
+              <TrailerButton title={data.nombre} video={data.video} onOpenChange={setTrailerOpen} />
             </div>
           </section>
         </>
@@ -707,6 +738,24 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
             )}
           </div>
         </div>,
+        document.body
+      )}
+
+      {heroMode === 'reveal' && data.audio && createPortal(
+        <>
+          <audio ref={audioRef} src={data.audio} loop preload="none" />
+          {isGoLeftTheme && (
+            <button
+              type="button"
+              className="gls-music-toggle cursor-target"
+              onClick={() => setMusicMuted(m => !m)}
+              aria-label={musicMuted ? 'Activar música' : 'Silenciar música'}
+              title={musicMuted ? 'Activar música' : 'Silenciar música'}
+            >
+              <i className={`fas ${musicMuted ? 'fa-volume-xmark' : 'fa-volume-high'}`} />
+            </button>
+          )}
+        </>,
         document.body
       )}
 
