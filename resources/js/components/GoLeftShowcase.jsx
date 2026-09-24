@@ -274,6 +274,7 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
   const formSectionRef = useRef(null);
   const audioRef = useRef(null);
   const [musicMuted, setMusicMuted] = useState(false);
+  const [audioPlaying, setAudioPlaying] = useState(false);
   const [trailerOpen, setTrailerOpen] = useState(false);
 
   useEffect(() => () => { if (logoPreview) URL.revokeObjectURL(logoPreview); }, [logoPreview]);
@@ -298,6 +299,13 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
   // para no pisar su propio audio. El click en la moneda que abre el panel
   // ya cuenta como gesto del usuario, asi que el navegador deja arrancar
   // con sonido -mismo motivo que el trailer, ver TrailerButton-.
+  // EXCEPCION: si el evento tiene activado "Mostrar al ingresar a la web"
+  // (data.autoOpen, ver go-left-panel-mount.jsx) el panel se abre solo, sin
+  // click real -ahi el navegador bloquea el autoplay con sonido igual, sin
+  // avisar. `audioPlaying` refleja el estado REAL (via onPlay/onPause del
+  // <audio>, no la intencion) para que el icono no mienta, y el boton de
+  // silenciar reintenta el play() directamente dentro de su propio click
+  // -eso si cuenta como gesto- en vez de solo cambiar una bandera.
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -307,6 +315,18 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
       audio.pause();
     }
   }, [isGoLeftTheme, trailerOpen, musicMuted]);
+
+  const toggleMusic = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      audio.play().catch(() => {});
+      setMusicMuted(false);
+    } else {
+      audio.pause();
+      setMusicMuted(true);
+    }
+  };
 
   useEffect(() => {
     if (stage === 'form') formSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -743,16 +763,23 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
 
       {heroMode === 'reveal' && data.audio && createPortal(
         <>
-          <audio ref={audioRef} src={data.audio} loop preload="none" />
+          <audio
+            ref={audioRef}
+            src={data.audio}
+            loop
+            preload="none"
+            onPlay={() => setAudioPlaying(true)}
+            onPause={() => setAudioPlaying(false)}
+          />
           {isGoLeftTheme && (
             <button
               type="button"
               className="gls-music-toggle cursor-target"
-              onClick={() => setMusicMuted(m => !m)}
-              aria-label={musicMuted ? 'Activar música' : 'Silenciar música'}
-              title={musicMuted ? 'Activar música' : 'Silenciar música'}
+              onClick={toggleMusic}
+              aria-label={audioPlaying ? 'Silenciar música' : 'Activar música'}
+              title={audioPlaying ? 'Silenciar música' : 'Activar música'}
             >
-              <i className={`fas ${musicMuted ? 'fa-volume-xmark' : 'fa-volume-high'}`} />
+              <i className={`fas ${audioPlaying ? 'fa-volume-high' : 'fa-volume-xmark'}`} />
             </button>
           )}
         </>,
