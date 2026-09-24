@@ -316,6 +316,28 @@ function GoLeftShowcase({ data, heroMode = 'plain', onClose }) {
     }
   }, [isGoLeftTheme, trailerOpen, musicMuted]);
 
+  // Si el bloqueo de autoplay ya se comio el intento de arriba (pasa con
+  // "Mostrar al ingresar a la web": el panel se abre sin click real), hace
+  // falta un primer gesto del usuario para destrabarlo. Este listener
+  // escucha el primer click/tap EN CUALQUIER PARTE de la pagina (no solo
+  // el boton de silenciar) y lo usa para arrancar el audio ahi mismo -asi
+  // suena con el primer toque, sea cual sea, no hace falta que el usuario
+  // encuentre el boton-. Ignora los clicks que caen sobre el propio boton
+  // -"gls-music-toggle" ya tiene su propio manejo en toggleMusic()-: sin
+  // este filtro, ambos terminaban compitiendo por el mismo click (este
+  // listener arrancaba el audio, y microsegundos despues toggleMusic
+  // volvia a leer el estado, lo veia "ya sonando" y lo pausaba de nuevo).
+  useEffect(() => {
+    if (!isGoLeftTheme || !data.audio) return undefined;
+    const tryUnlock = e => {
+      if (e.target?.closest?.('.gls-music-toggle')) return;
+      const audio = audioRef.current;
+      if (audio?.paused && !musicMuted) audio.play().catch(() => {});
+    };
+    document.addEventListener('pointerdown', tryUnlock, { once: true });
+    return () => document.removeEventListener('pointerdown', tryUnlock);
+  }, [isGoLeftTheme, data.audio, musicMuted]);
+
   const toggleMusic = () => {
     const audio = audioRef.current;
     if (!audio) return;
