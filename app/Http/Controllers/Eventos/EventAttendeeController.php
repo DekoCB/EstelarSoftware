@@ -180,7 +180,22 @@ class EventAttendeeController extends Controller
         return DB::transaction(function () use ($evento, $datos, $creadoPor) {
             $evento = Event::lockForUpdate()->find($evento->id);
 
-            $siguiente = $evento->asistentes()->count() + 1;
+            // NO usar count()+1: si alguna vez se borra un asistente (una
+            // prueba, un duplicado, lo que sea) el conteo baja pero el
+            // numero mas alto ya usado no -count()+1 vuelve a calcular un
+            // numero que ya existe y choca para siempre contra el unique
+            // de "codigo" (paso justo esto: se borraron 4 registros de
+            // prueba del evento 4 y quedo trabado en el mismo numero en
+            // cada intento). Se toma el maximo sufijo numerico realmente
+            // usado en los codigos existentes, no la cantidad de filas.
+            // Calculado en PHP -no con una funcion SQL especifica de un
+            // motor- porque los tests corren sobre SQLite y produccion
+            // sobre MySQL.
+            $maxUsado = $evento->asistentes()
+                ->pluck('codigo')
+                ->map(fn ($codigo) => (int) substr((string) $codigo, strrpos($codigo, '-') + 1))
+                ->max();
+            $siguiente = ($maxUsado ?? 0) + 1;
 
             return EventAttendee::create($datos + [
                 'event_id'  => $evento->id,
